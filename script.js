@@ -7,7 +7,7 @@
 /* ================= KONFIGURASI ================= */
 
 // GANTI dengan URL Google Apps Script Web App kamu
-const API_URL = "https://script.google.com/macros/s/AKfycbxcSDEkdcRIaW9r-F0IqGGNaXpGqDo42X0RvgtVGI4nByxl-X8H0HCBxnzNO47hD4NPbg/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxjzopqTCYnCiUigFcmb-GL4m-gPVk_yEO-lWIEgyqacdz0JvEsCd8GP_NhYm0Ry670_w/exec";
 
 
 /* ================= DATA APLIKASI ================= */
