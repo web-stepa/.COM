@@ -1,18 +1,14 @@
 /* ================= KONFIGURASI ================= */
 
-// URL Google Apps Script Web App Terbaru
-const API_URL = "https://script.google.com/macros/s/AKfycbwyH9t6VwHM_5RY5moelPwYk8Ct_okvchaxGjJ3Ht3K7MPqwITh78kB34aLayvJV4WyyA/exec";
+// URL Apps Script Web App Terbaru
+const API_URL = "https://script.google.com/macros/s/AKfycbxBa2DZVgsvAr_gMrJ6JeJK6t54_FaFKNzRy6e7YM2ese1VXow6t1xVF27E1-2yWzUqRw/exec";
 
-// Variabel Global Data
+// Global Data
 let currentUser = null;
-let data = {
-    anggota: [],
-    kas: [],
-    absensi: []
-};
+let data = { anggota: [], kas: [], absensi: [] };
 
 
-/* ================= INISIALISASI APLIKASI ================= */
+/* ================= INISIALISASI ================= */
 
 document.addEventListener("DOMContentLoaded", () => {
     checkSession();
@@ -20,9 +16,8 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
-/* ================= HELPER & UTILITIES ================= */
+/* ================= UTILS & API ================= */
 
-// Fungsi Panggilan API ke Google Apps Script (JSONP)
 function callAPI(action, params = {}) {
     return new Promise((resolve, reject) => {
         const callbackName = "jsonp_cb_" + Date.now() + "_" + Math.floor(Math.random() * 10000);
@@ -38,59 +33,50 @@ function callAPI(action, params = {}) {
 
         window[callbackName] = function(response) {
             delete window[callbackName];
-            document.body.removeChild(script);
+            if (document.body.contains(script)) document.body.removeChild(script);
             
-            if (response && response.success) {
-                resolve(response);
-            } else {
-                reject(new Error(response ? response.message : "Terjadi kesalahan pada server."));
-            }
+            if (response && response.success) resolve(response);
+            else reject(new Error(response ? response.message : "Gagal memproses data."));
         };
 
         script.onerror = function() {
             delete window[callbackName];
-            if (document.body.contains(script)) {
-                document.body.removeChild(script);
-            }
-            reject(new Error("Gagal terhubung ke Google Apps Script. Periksa koneksi internet Anda."));
+            if (document.body.contains(script)) document.body.removeChild(script);
+            reject(new Error("Gagal terhubung ke Google Apps Script."));
         };
 
         document.body.appendChild(script);
     });
 }
 
-// Notifikasi Toast
 function showToast(message) {
     const toast = document.getElementById("toast");
     if (toast) {
         toast.textContent = message;
         toast.classList.add("show");
-        setTimeout(() => {
-            toast.classList.remove("show");
-        }, 3000);
+        setTimeout(() => toast.classList.remove("show"), 3000);
     } else {
         alert(message);
     }
 }
 
-// Pengelolaan Modal
-function openModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) modal.classList.add("show");
+function openModal(id) {
+    const el = document.getElementById(id);
+    if (el) el.classList.add("show");
 }
 
-function closeModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) modal.classList.remove("show");
+function closeModal(id) {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove("show");
 }
 
 
-/* ================= SESSION & AUTHENTICATION ================= */
+/* ================= AUTENTIKASI ================= */
 
 function checkSession() {
-    const savedUser = localStorage.getItem("stepa_user");
-    if (savedUser) {
-        currentUser = JSON.parse(savedUser);
+    const saved = localStorage.getItem("stepa_user");
+    if (saved) {
+        currentUser = JSON.parse(saved);
         showMainApp();
     } else {
         showLoginPage();
@@ -106,7 +92,6 @@ function showMainApp() {
     document.getElementById("loginSection").style.display = "none";
     document.getElementById("appSection").style.display = "block";
     
-    // Set Nama & Role User
     document.getElementById("userDisplayName").textContent = currentUser.nama;
     document.getElementById("userRoleBadge").textContent = currentUser.role;
 
@@ -116,270 +101,207 @@ function showMainApp() {
 
 function setupUserRoleUI() {
     const isPengurus = currentUser && currentUser.role.toLowerCase() === "pengurus";
-    const pengurusElements = document.querySelectorAll(".pengurus-only");
-    
-    pengurusElements.forEach(el => {
+    document.querySelectorAll(".pengurus-only").forEach(el => {
         el.style.display = isPengurus ? "" : "none";
     });
 }
 
 
-/* ================= SETUP EVENT LISTENERS ================= */
+/* ================= EVENT LISTENERS ================= */
 
 function setupEventListeners() {
-    // Form Login
+    // Login & Logout
     const loginForm = document.getElementById("loginForm");
-    if (loginForm) {
-        loginForm.addEventListener("submit", handleLogin);
-    }
+    if (loginForm) loginForm.addEventListener("submit", handleLogin);
 
-    // Tombol Logout
     const logoutBtn = document.getElementById("logoutBtn");
-    if (logoutBtn) {
-        logoutBtn.addEventListener("click", handleLogout);
-    }
+    if (logoutBtn) logoutBtn.addEventListener("click", handleLogout);
 
-    // Tombol Sinkronisasi / Refresh
+    // Sinkronisasi
     const syncBtn = document.getElementById("syncBtn");
-    if (syncBtn) {
-        syncBtn.addEventListener("click", syncData);
-    }
+    if (syncBtn) syncBtn.addEventListener("click", syncData);
 
     // Navigation Tabs
-    const navLinks = document.querySelectorAll(".nav-link");
-    navLinks.forEach(link => {
+    document.querySelectorAll(".nav-link").forEach(link => {
         link.addEventListener("click", (e) => {
             e.preventDefault();
-            const targetTab = link.getAttribute("data-tab");
+            const target = link.getAttribute("data-tab");
             
-            navLinks.forEach(l => l.classList.remove("active"));
+            document.querySelectorAll(".nav-link").forEach(l => l.classList.remove("active"));
             link.classList.add("active");
 
-            document.querySelectorAll(".tab-content").forEach(tab => {
-                tab.style.display = "none";
-            });
-
-            const activeTab = document.getElementById(targetTab + "Tab");
+            document.querySelectorAll(".tab-content").forEach(tab => tab.style.display = "none");
+            const activeTab = document.getElementById(target + "Tab");
             if (activeTab) activeTab.style.display = "block";
         });
     });
 
-    // Close Modal Event Listeners
+    // Close Modals
     document.querySelectorAll(".close-modal").forEach(btn => {
-        btn.addEventListener("click", () => {
-            const modalId = btn.getAttribute("data-close");
-            closeModal(modalId);
-        });
+        btn.addEventListener("click", () => closeModal(btn.getAttribute("data-close")));
     });
 
-    // Modal Anggota Events
+    // Modal Anggota
     const addAnggotaBtn = document.getElementById("addAnggotaBtn");
-    if (addAnggotaBtn) {
-        addAnggotaBtn.addEventListener("click", () => openModal("anggotaModal"));
-    }
+    if (addAnggotaBtn) addAnggotaBtn.addEventListener("click", () => openModal("anggotaModal"));
 
     const anggotaForm = document.getElementById("anggotaForm");
-    if (anggotaForm) {
-        anggotaForm.addEventListener("submit", handleAddAnggota);
-    }
+    if (anggotaForm) anggotaForm.addEventListener("submit", handleAddAnggota);
 
-    // Modal Kas Events
+    // Modal Kas
     const addKasBtn = document.getElementById("addKasBtn");
-    if (addKasBtn) {
-        addKasBtn.addEventListener("click", () => openModal("kasModal"));
-    }
+    if (addKasBtn) addKasBtn.addEventListener("click", () => openModal("kasModal"));
 
     const kasForm = document.getElementById("kasForm");
-    if (kasForm) {
-        kasForm.addEventListener("submit", handleAddKas);
-    }
+    if (kasForm) kasForm.addEventListener("submit", handleAddKas);
 
-    // Modal Absensi Events
+    // Modal Absensi
     const addAbsensiBtn = document.getElementById("addAbsensiBtn");
-    if (addAbsensiBtn) {
-        addAbsensiBtn.addEventListener("click", () => openModal("absensiModal"));
-    }
+    if (addAbsensiBtn) addAbsensiBtn.addEventListener("click", () => openModal("absensiModal"));
 
     const absensiForm = document.getElementById("absensiForm");
-    if (absensiForm) {
-        absensiForm.addEventListener("submit", handleAddAbsensi);
-    }
+    if (absensiForm) absensiForm.addEventListener("submit", handleAddAbsensi);
 }
 
 
-/* ================= API HANDLERS ================= */
+/* ================= API ACTIONS ================= */
 
-// LOGIN
 async function handleLogin(e) {
     e.preventDefault();
-    const usernameInput = document.getElementById("username").value.trim();
-    const passwordInput = document.getElementById("password").value.trim();
+    const u = document.getElementById("username").value.trim();
+    const p = document.getElementById("password").value.trim();
 
     try {
-        const response = await callAPI("login", {
-            username: usernameInput,
-            password: passwordInput
-        });
-
-        currentUser = response.data;
+        const res = await callAPI("login", { username: u, password: p });
+        currentUser = res.data;
         localStorage.setItem("stepa_user", JSON.stringify(currentUser));
         showToast("Login berhasil! Selamat datang " + currentUser.nama);
         showMainApp();
-    } catch (error) {
-        showToast("Login gagal: " + error.message);
+    } catch (err) {
+        showToast("Login gagal: " + err.message);
     }
 }
 
-// LOGOUT
 function handleLogout() {
     localStorage.removeItem("stepa_user");
     currentUser = null;
-    showToast("Berhasil keluar.");
+    showToast("Berhasil logout.");
     showLoginPage();
 }
 
-// LOAD & SINKRONISASI ALL DATA
 async function loadAllData() {
     try {
-        const response = await callAPI("allData");
-        data = response.data;
+        const res = await callAPI("allData");
+        data = res.data;
         renderAll();
-    } catch (error) {
-        showToast("Gagal memuat data: " + error.message);
+    } catch (err) {
+        showToast("Gagal memuat data: " + err.message);
     }
 }
 
 async function syncData() {
-    const syncBtn = document.getElementById("syncBtn");
-    if (syncBtn) syncBtn.disabled = true;
-    showToast("Menyingkronkan data dengan Google Sheets...");
+    const btn = document.getElementById("syncBtn");
+    if (btn) btn.disabled = true;
+    showToast("Menyingkronkan data dari Google Sheets...");
 
     try {
         await loadAllData();
         showToast("Semua data berhasil disinkronkan!");
-    } catch (error) {
-        showToast("Sinkronisasi gagal: " + error.message);
+    } catch (err) {
+        showToast("Sinkronisasi gagal: " + err.message);
     } finally {
-        if (syncBtn) syncBtn.disabled = false;
+        if (btn) btn.disabled = false;
     }
 }
 
-
-/* ================= MANAJEMEN ANGGOTA ================= */
-
 async function handleAddAnggota(e) {
     e.preventDefault();
-
     const nama = document.getElementById("anggotaNama").value.trim();
     const kelas = document.getElementById("anggotaKelas").value.trim();
     const hp = document.getElementById("anggotaHp").value.trim();
     const status = document.getElementById("anggotaStatus").value;
 
-    if (!nama) {
-        showToast("Nama anggota wajib diisi!");
-        return;
-    }
-
     try {
-        await callAPI("addAnggota", {
-            nama: nama,
-            kelas: kelas,
-            hp: hp,
-            status: status,
-            username: currentUser.username
-        });
-
+        await callAPI("addAnggota", { nama, kelas, hp, status, username: currentUser.username });
         closeModal("anggotaModal");
         e.target.reset();
         await loadAllData();
-        showToast("Data calon anggota berhasil ditambahkan.");
-    } catch (error) {
-        showToast(error.message);
+        showToast("Calon anggota berhasil ditambahkan.");
+    } catch (err) {
+        showToast(err.message);
     }
 }
 
-
-/* ================= MANAJEMEN KAS ================= */
+async function deleteAnggota(id) {
+    if (!confirm("Apakah Anda yakin ingin menghapus data anggota ini?")) return;
+    try {
+        await callAPI("deleteAnggota", { id, username: currentUser.username });
+        await loadAllData();
+        showToast("Data anggota berhasil dihapus.");
+    } catch (err) {
+        showToast(err.message);
+    }
+}
 
 async function handleAddKas(e) {
     e.preventDefault();
-
     const jenis = document.getElementById("kasJenis").value;
     const keterangan = document.getElementById("kasKeterangan").value.trim();
     const nominal = document.getElementById("kasNominal").value;
 
     try {
-        await callAPI("addKas", {
-            jenis: jenis,
-            keterangan: keterangan,
-            nominal: nominal,
-            username: currentUser.username
-        });
-
+        await callAPI("addKas", { jenis, keterangan, nominal, username: currentUser.username });
         closeModal("kasModal");
         e.target.reset();
         await loadAllData();
         showToast("Transaksi kas berhasil disimpan.");
-    } catch (error) {
-        showToast(error.message);
+    } catch (err) {
+        showToast(err.message);
     }
 }
 
 async function deleteKas(id) {
     if (!confirm("Apakah Anda yakin ingin menghapus data kas ini?")) return;
-
     try {
-        await callAPI("deleteKas", { id: id, username: currentUser.username });
+        await callAPI("deleteKas", { id, username: currentUser.username });
         await loadAllData();
         showToast("Data kas berhasil dihapus.");
-    } catch (error) {
-        showToast(error.message);
+    } catch (err) {
+        showToast(err.message);
     }
 }
 
-
-/* ================= MANAJEMEN ABSENSI ================= */
-
 async function handleAddAbsensi(e) {
     e.preventDefault();
-
     const tanggal = document.getElementById("absensiTanggal").value;
     const nama = document.getElementById("absensiNamaSelect").value;
     const status = document.getElementById("absensiStatus").value;
     const keterangan = document.getElementById("absensiKeterangan").value.trim();
 
     try {
-        await callAPI("addAbsensi", {
-            tanggal: tanggal,
-            nama: nama,
-            status: status,
-            keterangan: keterangan,
-            username: currentUser.username
-        });
-
+        await callAPI("addAbsensi", { tanggal, nama, status, keterangan, username: currentUser.username });
         closeModal("absensiModal");
         e.target.reset();
         await loadAllData();
         showToast("Absensi berhasil dicatat.");
-    } catch (error) {
-        showToast(error.message);
+    } catch (err) {
+        showToast(err.message);
     }
 }
 
 async function deleteAbsensi(id) {
     if (!confirm("Apakah Anda yakin ingin menghapus data absensi ini?")) return;
-
     try {
-        await callAPI("deleteAbsensi", { id: id, username: currentUser.username });
+        await callAPI("deleteAbsensi", { id, username: currentUser.username });
         await loadAllData();
         showToast("Data absensi berhasil dihapus.");
-    } catch (error) {
-        showToast(error.message);
+    } catch (err) {
+        showToast(err.message);
     }
 }
 
 
-/* ================= RENDER TO UI ================= */
+/* ================= RENDERING ================= */
 
 function renderAll() {
     renderAnggota();
@@ -393,9 +315,8 @@ function renderAnggota() {
     if (!table) return;
 
     table.innerHTML = "";
-
     if (!data.anggota || !data.anggota.length) {
-        table.innerHTML = `<tr><td colspan="5" class="empty">Belum ada data calon anggota.</td></tr>`;
+        table.innerHTML = `<tr><td colspan="6" class="empty">Belum ada calon anggota.</td></tr>`;
         return;
     }
 
@@ -411,9 +332,13 @@ function renderAnggota() {
                     ${item.status || "Aktif"}
                 </span>
             </td>
+            <td class="pengurus-only">
+                <button class="delete-btn" onclick="deleteAnggota('${item.id}')">Hapus</button>
+            </td>
         `;
         table.appendChild(tr);
     });
+    setupUserRoleUI();
 }
 
 function renderKas() {
@@ -447,7 +372,6 @@ function renderKas() {
         });
     }
 
-    // Update Ringkasan Saldo
     const saldo = totalMasuk - totalKeluar;
     if (document.getElementById("totalMasuk")) document.getElementById("totalMasuk").textContent = "Rp " + totalMasuk.toLocaleString("id-ID");
     if (document.getElementById("totalKeluar")) document.getElementById("totalKeluar").textContent = "Rp " + totalKeluar.toLocaleString("id-ID");
@@ -461,7 +385,6 @@ function renderAbsensi() {
     if (!table) return;
 
     table.innerHTML = "";
-
     if (!data.absensi || !data.absensi.length) {
         table.innerHTML = `<tr><td colspan="6" class="empty">Belum ada catatan absensi.</td></tr>`;
         return;
@@ -494,7 +417,6 @@ function populateAbsensiNames() {
     if (!select) return;
 
     select.innerHTML = `<option value="">-- Pilih Anggota --</option>`;
-
     if (data.anggota && data.anggota.length) {
         data.anggota.forEach(item => {
             const opt = document.createElement("option");
