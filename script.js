@@ -9,10 +9,6 @@
 // GANTI dengan URL Google Apps Script Web App kamu
 const API_URL = "https://script.google.com/macros/s/AKfycbxjzopqTCYnCiUigFcmb-GL4m-gPVk_yEO-lWIEgyqacdz0JvEsCd8GP_NhYm0Ry670_w/exec";
 
-/* ================= KONFIGURASI ================= */
-
-// Tempelkan URL Google Apps Script Web App kamu di dalam tanda kutip ini:
-const API_URL = "https://script.google.com/macros/s/AKfycbzdzBIFTdeBC0Z437JFjY0vGSXp1V749IF11vzLlWjw5Y4d4Bd5-580law8aTCrVnN0/exec";
 
 /* ================= DATA APLIKASI ================= */
 
@@ -79,12 +75,12 @@ function callAPI(action, params = {}) {
 
         if (
             !API_URL ||
-            API_URL.includes("MASUKKAN_URL")
+            API_URL.includes("https://script.google.com/macros/s/AKfycbzdzBIFTdeBC0Z437JFjY0vGSXp1V749IF11vzLlWjw5Y4d4Bd5-580law8aTCrVnN0/exec")
         ) {
 
             reject(
                 new Error(
-                    "URL Google Apps Script belum dipasang."
+                    "https://script.google.com/macros/s/AKfycbzdzBIFTdeBC0Z437JFjY0vGSXp1V749IF11vzLlWjw5Y4d4Bd5-580law8aTCrVnN0/exec"
                 )
             );
 
