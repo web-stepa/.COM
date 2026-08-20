@@ -1,6 +1,6 @@
 /* ================= KONFIGURASI ================= */
 
-// URL Google Apps Script Web App Anda
+// URL Google Apps Script Web App Terbaru
 const API_URL = "https://script.google.com/macros/s/AKfycbxBa2DZVgsvAr_gMrJ6JeJK6t54_FaFKNzRy6e7YM2ese1VXow6t1xVF27E1-2yWzUqRw/exec";
 
 // Variabel Global Data
