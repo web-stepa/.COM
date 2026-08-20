@@ -1,7 +1,7 @@
 /* ================= KONFIGURASI ================= */
 
 // URL Google Apps Script Web App Anda
-const API_URL = "https://script.google.com/macros/s/AKfycbzdzBIFTdeBC0Z437JFjY0vGSXp1V749IF11vzLlWjw5Y4d4Bd5-580law8aTCrVnN0/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxBa2DZVgsvAr_gMrJ6JeJK6t54_FaFKNzRy6e7YM2ese1VXow6t1xVF27E1-2yWzUqRw/exec";
 
 // Variabel Global Data
 let currentUser = null;
