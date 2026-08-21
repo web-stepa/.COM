@@ -1,7 +1,7 @@
 /* ================= KONFIGURASI ================= */
 
 // URL Apps Script Web App Terbaru
-const API_URL = "https://script.google.com/macros/s/AKfycbxBa2DZVgsvAr_gMrJ6JeJK6t54_FaFKNzRy6e7YM2ese1VXow6t1xVF27E1-2yWzUqRw/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxBAHyviSvcV5jIjA4s3kCWk85hwxlYcoDd6Mlo5WjkVBlcgR2MGz5wItAilVDDsiCc6w/exec";
 
 // Global Data
 let currentUser = null;
