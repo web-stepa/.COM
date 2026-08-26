@@ -1,27 +1,40 @@
+/* =====================================================
+   STEPA MANAGEMENT - FRONTEND
+   Cocok dengan index.html STEPA saat ini
+   ===================================================== */
+
 /* ================= KONFIGURASI ================= */
 
-// URL Apps Script Web App Terbaru
 const API_URL = "https://script.google.com/macros/s/AKfycbxYeIYi85RfKBRPuey7v7Z7c9aJ3Iw6MSx9iAmsDuOYsHOEad6jJY2cvvu3aQYvB5q_Dw/exec";
 
-// Global Data
 let currentUser = null;
-let data = { anggota: [], kas: [], absensi: [] };
+
+let data = {
+    anggota: [],
+    kas: [],
+    absensi: []
+};
 
 
 /* ================= INISIALISASI ================= */
 
 document.addEventListener("DOMContentLoaded", () => {
-    checkSession();
     setupEventListeners();
+    checkSession();
 });
 
 
-/* ================= UTILS & API ================= */
+/* ================= API / JSONP ================= */
 
 function callAPI(action, params = {}) {
     return new Promise((resolve, reject) => {
-        const callbackName = "jsonp_cb_" + Date.now() + "_" + Math.floor(Math.random() * 10000);
-        
+
+        const callbackName =
+            "stepa_cb_" +
+            Date.now() +
+            "_" +
+            Math.floor(Math.random() * 100000);
+
         const queryParams = new URLSearchParams({
             action: action,
             callback: callbackName,
@@ -29,63 +42,167 @@ function callAPI(action, params = {}) {
         });
 
         const script = document.createElement("script");
-        script.src = `${API_URL}?${queryParams.toString()}`;
 
-        window[callbackName] = function(response) {
-            delete window[callbackName];
-            if (document.body.contains(script)) document.body.removeChild(script);
-            
-            if (response && response.success) resolve(response);
-            else reject(new Error(response ? response.message : "Gagal memproses data."));
+        script.src =
+            API_URL + "?" + queryParams.toString();
+
+        let finished = false;
+
+        const cleanup = () => {
+            if (window[callbackName]) {
+                delete window[callbackName];
+            }
+
+            if (script.parentNode) {
+                script.parentNode.removeChild(script);
+            }
         };
 
-        script.onerror = function() {
-            delete window[callbackName];
-            if (document.body.contains(script)) document.body.removeChild(script);
-            reject(new Error("Gagal terhubung ke Google Apps Script."));
+        const timeout = setTimeout(() => {
+            if (finished) return;
+
+            finished = true;
+            cleanup();
+
+            reject(
+                new Error(
+                    "Waktu koneksi habis. Periksa deployment Google Apps Script."
+                )
+            );
+        }, 15000);
+
+        window[callbackName] = (response) => {
+            if (finished) return;
+
+            finished = true;
+            clearTimeout(timeout);
+            cleanup();
+
+            if (response && response.success) {
+                resolve(response);
+            } else {
+                reject(
+                    new Error(
+                        response?.message ||
+                        "Gagal memproses data."
+                    )
+                );
+            }
+        };
+
+        script.onerror = () => {
+            if (finished) return;
+
+            finished = true;
+            clearTimeout(timeout);
+            cleanup();
+
+            reject(
+                new Error(
+                    "Gagal terhubung ke Google Apps Script."
+                )
+            );
         };
 
         document.body.appendChild(script);
     });
 }
 
+
+/* ================= UTILITAS ================= */
+
+function $(id) {
+    return document.getElementById(id);
+}
+
+
+function escapeHTML(value) {
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+
+function formatRupiah(value) {
+    const nominal = Number(value) || 0;
+
+    return "Rp" +
+        nominal.toLocaleString("id-ID");
+}
+
+
 function showToast(message) {
-    const toast = document.getElementById("toast");
-    if (toast) {
-        toast.textContent = message;
-        toast.classList.add("show");
-        setTimeout(() => toast.classList.remove("show"), 3000);
-    } else {
+    const toast = $("toast");
+
+    if (!toast) {
         alert(message);
+        return;
+    }
+
+    toast.textContent = message;
+    toast.classList.add("show");
+
+    clearTimeout(window.stepaToastTimer);
+
+    window.stepaToastTimer = setTimeout(() => {
+        toast.classList.remove("show");
+    }, 3000);
+}
+
+
+function openModal(id) {
+    const modal = $(id);
+
+    if (modal) {
+        modal.classList.add("show");
     }
 }
 
-function openModal(id) {
-    const el = document.getElementById(id);
-    if (el) el.classList.add("show");
-}
 
 function closeModal(id) {
-    const el = document.getElementById(id);
-    if (el) el.classList.remove("show");
+    const modal = $(id);
+
+    if (modal) {
+        modal.classList.remove("show");
+    }
 }
 
 
-/* ================= AUTENTIKASI ================= */
+/* ================= SESSION / LOGIN ================= */
 
 function checkSession() {
-    const saved = localStorage.getItem("stepa_user");
 
-    if (saved) {
-        try {
-            currentUser = JSON.parse(saved);
-            showMainApp();
-        } catch (error) {
-            localStorage.removeItem("stepa_user");
-            currentUser = null;
-            showLoginPage();
+    const saved =
+        localStorage.getItem("stepa_user");
+
+    if (!saved) {
+        showLoginPage();
+        return;
+    }
+
+    try {
+
+        currentUser =
+            JSON.parse(saved);
+
+        if (
+            !currentUser ||
+            !currentUser.username
+        ) {
+            throw new Error("Session tidak valid.");
         }
-    } else {
+
+        showMainApp();
+
+    } catch (error) {
+
+        localStorage.removeItem("stepa_user");
+
+        currentUser = null;
+
         showLoginPage();
     }
 }
@@ -93,8 +210,8 @@ function checkSession() {
 
 function showLoginPage() {
 
-    const loginPage = document.getElementById("loginPage");
-    const appPage = document.getElementById("appPage");
+    const loginPage = $("loginPage");
+    const appPage = $("appPage");
 
     if (loginPage) {
         loginPage.style.display = "flex";
@@ -109,8 +226,8 @@ function showLoginPage() {
 
 function showMainApp() {
 
-    const loginPage = document.getElementById("loginPage");
-    const appPage = document.getElementById("appPage");
+    const loginPage = $("loginPage");
+    const appPage = $("appPage");
 
     if (loginPage) {
         loginPage.style.display = "none";
@@ -118,125 +235,442 @@ function showMainApp() {
 
     if (appPage) {
         appPage.classList.remove("hidden");
-        appPage.style.display = "flex";
+        appPage.style.display = "";
     }
 
-    const userName = document.getElementById("userName");
-    const userRole = document.getElementById("userRole");
-    const userAvatar = document.getElementById("userAvatar");
-
-    if (userName) {
-        userName.textContent = currentUser.nama || currentUser.username;
-    }
-
-    if (userRole) {
-        userRole.textContent = currentUser.role || "Anggota";
-    }
-
-    if (userAvatar) {
-        userAvatar.textContent =
-            (currentUser.nama || currentUser.username)
-            .charAt(0)
-            .toUpperCase();
-    }
-
+    updateUserInfo();
     setupUserRoleUI();
+    showPage("dashboard");
 
     loadAllData();
 }
 
 
+function updateUserInfo() {
+
+    if (!currentUser) return;
+
+    const nama =
+        currentUser.nama ||
+        currentUser.username ||
+        "Pengguna";
+
+    const role =
+        currentUser.role ||
+        "Anggota";
+
+    if ($("userName")) {
+        $("userName").textContent = nama;
+    }
+
+    if ($("userRole")) {
+        $("userRole").textContent = role;
+    }
+
+    if ($("userAvatar")) {
+        $("userAvatar").textContent =
+            nama.charAt(0).toUpperCase();
+    }
+}
+
+
 function setupUserRoleUI() {
 
+    const role =
+        String(
+            currentUser?.role || ""
+        ).toLowerCase();
+
     const isPengurus =
-        currentUser &&
-        String(currentUser.role || "").toLowerCase() === "pengurus";
+        role === "pengurus";
 
-    document.querySelectorAll(".pengurus-only").forEach(el => {
+    document
+        .querySelectorAll(".pengurus-only")
+        .forEach((element) => {
 
-        el.style.display =
-            isPengurus ? "" : "none";
+            element.style.display =
+                isPengurus ? "" : "none";
 
-    });
+        });
 }
+
+
+/* ================= NAVIGASI ================= */
+
+function showPage(pageName) {
+
+    const pages = [
+        "dashboard",
+        "kas",
+        "absensi",
+        "anggota"
+    ];
+
+    if (!pages.includes(pageName)) {
+        pageName = "dashboard";
+    }
+
+    document
+        .querySelectorAll(".page")
+        .forEach((page) => {
+            page.classList.remove("active-page");
+        });
+
+    const targetPage =
+        $(pageName + "Page");
+
+    if (targetPage) {
+        targetPage.classList.add("active-page");
+    }
+
+    document
+        .querySelectorAll(".nav-item")
+        .forEach((item) => {
+
+            item.classList.toggle(
+                "active",
+                item.dataset.page === pageName
+            );
+
+        });
+
+    const titles = {
+        dashboard: {
+            title: "Dashboard",
+            subtitle: "Ringkasan kegiatan STEPA"
+        },
+
+        kas: {
+            title: "Kas STEPA",
+            subtitle: "Kelola pemasukan dan pengeluaran kas"
+        },
+
+        absensi: {
+            title: "Absensi",
+            subtitle: "Catat kehadiran calon anggota STEPA"
+        },
+
+        anggota: {
+            title: "Calon Anggota",
+            subtitle: "Data calon anggota STEPA"
+        }
+    };
+
+    const info =
+        titles[pageName];
+
+    if ($("pageTitle")) {
+        $("pageTitle").textContent =
+            info.title;
+    }
+
+    if ($("pageSubtitle")) {
+        $("pageSubtitle").textContent =
+            info.subtitle;
+    }
+
+
+    // Pastikan data sudah tersedia
+    if (pageName === "dashboard") {
+        renderDashboard();
+    }
+
+    if (pageName === "kas") {
+        renderKas();
+    }
+
+    if (pageName === "absensi") {
+        renderAbsensi();
+        populateAbsensiNames();
+    }
+
+    if (pageName === "anggota") {
+        renderAnggota();
+    }
+}
+
 
 /* ================= EVENT LISTENERS ================= */
 
 function setupEventListeners() {
-    // Login & Logout
-    const loginForm = document.getElementById("loginForm");
-    if (loginForm) loginForm.addEventListener("submit", handleLogin);
 
-    const logoutBtn = document.getElementById("logoutBtn");
-    if (logoutBtn) logoutBtn.addEventListener("click", handleLogout);
+    /* LOGIN */
 
-    // Sinkronisasi
-    const syncBtn = document.getElementById("syncBtn");
-    if (syncBtn) syncBtn.addEventListener("click", syncData);
+    const loginForm =
+        $("loginForm");
 
-    // Navigation Tabs
-    document.querySelectorAll(".nav-link").forEach(link => {
-        link.addEventListener("click", (e) => {
-            e.preventDefault();
-            const target = link.getAttribute("data-tab");
-            
-            document.querySelectorAll(".nav-link").forEach(l => l.classList.remove("active"));
-            link.classList.add("active");
+    if (loginForm) {
+        loginForm.addEventListener(
+            "submit",
+            handleLogin
+        );
+    }
 
-            document.querySelectorAll(".tab-content").forEach(tab => tab.style.display = "none");
-            const activeTab = document.getElementById(target + "Tab");
-            if (activeTab) activeTab.style.display = "block";
+
+    /* SHOW PASSWORD */
+
+    const showPassword =
+        $("showPassword");
+
+    if (showPassword) {
+
+        showPassword.addEventListener(
+            "click",
+            () => {
+
+                const password =
+                    $("password");
+
+                if (!password) return;
+
+                if (
+                    password.type === "password"
+                ) {
+
+                    password.type = "text";
+
+                    showPassword.textContent =
+                        "🙈";
+
+                } else {
+
+                    password.type = "password";
+
+                    showPassword.textContent =
+                        "👁";
+
+                }
+            }
+        );
+    }
+
+
+    /* LOGOUT */
+
+    const logoutBtn =
+        $("logoutBtn");
+
+    if (logoutBtn) {
+
+        logoutBtn.addEventListener(
+            "click",
+            handleLogout
+        );
+    }
+
+
+    /* NAVIGASI SIDEBAR */
+
+    document
+        .querySelectorAll(".nav-item")
+        .forEach((button) => {
+
+            button.addEventListener(
+                "click",
+                () => {
+
+                    const page =
+                        button.dataset.page;
+
+                    showPage(page);
+                }
+            );
         });
-    });
 
-    // Close Modals
-    document.querySelectorAll(".close-modal").forEach(btn => {
-        btn.addEventListener("click", () => closeModal(btn.getAttribute("data-close")));
-    });
 
-    // Modal Anggota
-    const addAnggotaBtn = document.getElementById("addAnggotaBtn");
-    if (addAnggotaBtn) addAnggotaBtn.addEventListener("click", () => openModal("anggotaModal"));
+    /* BUTTON "LIHAT SEMUA" */
 
-    const anggotaForm = document.getElementById("anggotaForm");
-    if (anggotaForm) anggotaForm.addEventListener("submit", handleAddAnggota);
+    document
+        .querySelectorAll("[data-page-btn]")
+        .forEach((button) => {
 
-    // Modal Kas
-    const addKasBtn = document.getElementById("addKasBtn");
-    if (addKasBtn) addKasBtn.addEventListener("click", () => openModal("kasModal"));
+            button.addEventListener(
+                "click",
+                () => {
 
-    const kasForm = document.getElementById("kasForm");
-    if (kasForm) kasForm.addEventListener("submit", handleAddKas);
+                    showPage(
+                        button.dataset.pageBtn
+                    );
+                }
+            );
+        });
 
-    // Modal Absensi
-    const addAbsensiBtn = document.getElementById("addAbsensiBtn");
-    if (addAbsensiBtn) addAbsensiBtn.addEventListener("click", () => openModal("absensiModal"));
 
-    const absensiForm = document.getElementById("absensiForm");
-    if (absensiForm) absensiForm.addEventListener("submit", handleAddAbsensi);
+    /* REFRESH */
+
+    const refreshBtn =
+        $("refreshBtn");
+
+    if (refreshBtn) {
+
+        refreshBtn.addEventListener(
+            "click",
+            async () => {
+
+                await loadAllData();
+
+                showToast(
+                    "Data berhasil diperbarui."
+                );
+            }
+        );
+    }
+
+
+    /* SINKRONISASI */
+
+    const syncBtn =
+        $("syncBtn");
+
+    if (syncBtn) {
+
+        syncBtn.addEventListener(
+            "click",
+            syncData
+        );
+    }
+
+
+    /* MODAL CLOSE */
+
+    document
+        .querySelectorAll(".close-modal")
+        .forEach((button) => {
+
+            button.addEventListener(
+                "click",
+                () => {
+
+                    closeModal(
+                        button.dataset.close
+                    );
+
+                }
+            );
+        });
+
+
+    /* CLOSE MODAL KETIKA KLIK LUAR */
+
+    document
+        .querySelectorAll(".modal")
+        .forEach((modal) => {
+
+            modal.addEventListener(
+                "click",
+                (event) => {
+
+                    if (
+                        event.target === modal
+                    ) {
+                        modal.classList.remove(
+                            "show"
+                        );
+                    }
+
+                }
+            );
+        });
+
+
+    /* KAS */
+
+    const kasForm =
+        $("kasForm");
+
+    if (kasForm) {
+
+        kasForm.addEventListener(
+            "submit",
+            handleAddKas
+        );
+    }
+
+
+    const addKasBtn =
+        $("addKasBtn");
+
+    if (addKasBtn) {
+
+        addKasBtn.addEventListener(
+            "click",
+            () => {
+
+                if (!isPengurus()) {
+                    showToast(
+                        "Hanya pengurus yang dapat menginput kas."
+                    );
+                    return;
+                }
+
+                openModal("kasModal");
+            }
+        );
+    }
+
+
+    /* ABSENSI */
+
+    const absensiForm =
+        $("absensiForm");
+
+    if (absensiForm) {
+
+        absensiForm.addEventListener(
+            "submit",
+            handleAddAbsensi
+        );
+    }
+
+
+    const addAbsensiBtn =
+        $("addAbsensiBtn");
+
+    if (addAbsensiBtn) {
+
+        addAbsensiBtn.addEventListener(
+            "click",
+            () => {
+
+                if (!isPengurus()) {
+                    showToast(
+                        "Hanya pengurus yang dapat menginput absensi."
+                    );
+                    return;
+                }
+
+                populateAbsensiNames();
+                openModal("absensiModal");
+            }
+        );
+    }
 }
 
 
-/* ================= API ACTIONS ================= */
+/* ================= ROLE ================= */
 
-async function handleLogin(e) {
+function isPengurus() {
 
-    e.preventDefault();
+    return String(
+        currentUser?.role || ""
+    ).toLowerCase() === "pengurus";
+}
 
-    const usernameInput =
-        document.getElementById("username");
 
-    const passwordInput =
-        document.getElementById("password");
+/* ================= LOGIN API ================= */
 
-    const message =
-        document.getElementById("loginMessage");
+async function handleLogin(event) {
+
+    event.preventDefault();
 
     const username =
-        usernameInput.value.trim();
+        $("username")?.value.trim();
 
     const password =
-        passwordInput.value.trim();
+        $("password")?.value.trim();
+
+    const message =
+        $("loginMessage");
 
 
     if (!username || !password) {
@@ -259,15 +693,22 @@ async function handleLogin(e) {
     try {
 
         const response =
-            await callAPI("login", {
-                username: username,
-                password: password
-            });
+            await callAPI(
+                "login",
+                {
+                    username: username,
+                    password: password
+                }
+            );
 
 
-        if (!response.success) {
+        if (
+            !response ||
+            !response.success ||
+            !response.data
+        ) {
             throw new Error(
-                response.message ||
+                response?.message ||
                 "Login gagal."
             );
         }
@@ -293,269 +734,1093 @@ async function handleLogin(e) {
 
         showToast(
             "Login berhasil! Selamat datang " +
-            currentUser.nama
+            (currentUser.nama ||
+                currentUser.username)
         );
 
 
     } catch (error) {
 
         if (message) {
-
             message.textContent =
                 "Login gagal: " +
                 error.message;
-
         }
 
         console.error(
-            "LOGIN ERROR:",
+            "STEPA LOGIN ERROR:",
+            error
+        );
+    }
+}
+
+
+/* ================= LOGOUT ================= */
+
+function handleLogout() {
+
+    localStorage.removeItem(
+        "stepa_user"
+    );
+
+    currentUser = null;
+
+    data = {
+        anggota: [],
+        kas: [],
+        absensi: []
+    };
+
+
+    if ($("loginForm")) {
+        $("loginForm").reset();
+    }
+
+    if ($("loginMessage")) {
+        $("loginMessage").textContent = "";
+    }
+
+
+    showLoginPage();
+
+    showToast(
+        "Berhasil keluar dari akun."
+    );
+}
+
+
+/* ================= LOAD DATA ================= */
+
+async function loadAllData() {
+
+    if (!currentUser) return;
+
+    try {
+
+        const response =
+            await callAPI("allData");
+
+
+        data =
+            response.data || {
+                anggota: [],
+                kas: [],
+                absensi: []
+            };
+
+
+        // Pastikan setiap array tersedia
+        data.anggota =
+            Array.isArray(data.anggota)
+                ? data.anggota
+                : [];
+
+        data.kas =
+            Array.isArray(data.kas)
+                ? data.kas
+                : [];
+
+        data.absensi =
+            Array.isArray(data.absensi)
+                ? data.absensi
+                : [];
+
+
+        renderAll();
+
+
+    } catch (error) {
+
+        console.error(
+            "LOAD DATA ERROR:",
             error
         );
 
+        showToast(
+            "Gagal memuat data: " +
+            error.message
+        );
     }
 }
 
-function handleLogout() {
-    localStorage.removeItem("stepa_user");
-    currentUser = null;
-    showToast("Berhasil logout.");
-    showLoginPage();
-}
 
-async function loadAllData() {
-    try {
-        const res = await callAPI("allData");
-        data = res.data;
-        renderAll();
-    } catch (err) {
-        showToast("Gagal memuat data: " + err.message);
-    }
-}
+/* ================= SINKRONISASI ================= */
 
 async function syncData() {
-    const btn = document.getElementById("syncBtn");
-    if (btn) btn.disabled = true;
-    showToast("Menyingkronkan data dari Google Sheets...");
 
-    try {
-        await loadAllData();
-        showToast("Semua data berhasil disinkronkan!");
-    } catch (err) {
-        showToast("Sinkronisasi gagal: " + err.message);
-    } finally {
-        if (btn) btn.disabled = false;
-    }
-}
-
-async function handleAddAnggota(e) {
-    e.preventDefault();
-    const nama = document.getElementById("anggotaNama").value.trim();
-    const kelas = document.getElementById("anggotaKelas").value.trim();
-    const hp = document.getElementById("anggotaHp").value.trim();
-    const status = document.getElementById("anggotaStatus").value;
-
-    try {
-        await callAPI("addAnggota", { nama, kelas, hp, status, username: currentUser.username });
-        closeModal("anggotaModal");
-        e.target.reset();
-        await loadAllData();
-        showToast("Calon anggota berhasil ditambahkan.");
-    } catch (err) {
-        showToast(err.message);
-    }
-}
-
-async function deleteAnggota(id) {
-    if (!confirm("Apakah Anda yakin ingin menghapus data anggota ini?")) return;
-    try {
-        await callAPI("deleteAnggota", { id, username: currentUser.username });
-        await loadAllData();
-        showToast("Data anggota berhasil dihapus.");
-    } catch (err) {
-        showToast(err.message);
-    }
-}
-
-async function handleAddKas(e) {
-    e.preventDefault();
-    const jenis = document.getElementById("kasJenis").value;
-    const keterangan = document.getElementById("kasKeterangan").value.trim();
-    const nominal = document.getElementById("kasNominal").value;
-
-    try {
-        await callAPI("addKas", { jenis, keterangan, nominal, username: currentUser.username });
-        closeModal("kasModal");
-        e.target.reset();
-        await loadAllData();
-        showToast("Transaksi kas berhasil disimpan.");
-    } catch (err) {
-        showToast(err.message);
-    }
-}
-
-async function deleteKas(id) {
-    if (!confirm("Apakah Anda yakin ingin menghapus data kas ini?")) return;
-    try {
-        await callAPI("deleteKas", { id, username: currentUser.username });
-        await loadAllData();
-        showToast("Data kas berhasil dihapus.");
-    } catch (err) {
-        showToast(err.message);
-    }
-}
-
-async function handleAddAbsensi(e) {
-    e.preventDefault();
-    const tanggal = document.getElementById("absensiTanggal").value;
-    const nama = document.getElementById("absensiNamaSelect").value;
-    const status = document.getElementById("absensiStatus").value;
-    const keterangan = document.getElementById("absensiKeterangan").value.trim();
-
-    try {
-        await callAPI("addAbsensi", { tanggal, nama, status, keterangan, username: currentUser.username });
-        closeModal("absensiModal");
-        e.target.reset();
-        await loadAllData();
-        showToast("Absensi berhasil dicatat.");
-    } catch (err) {
-        showToast(err.message);
-    }
-}
-
-async function deleteAbsensi(id) {
-    if (!confirm("Apakah Anda yakin ingin menghapus data absensi ini?")) return;
-    try {
-        await callAPI("deleteAbsensi", { id, username: currentUser.username });
-        await loadAllData();
-        showToast("Data absensi berhasil dihapus.");
-    } catch (err) {
-        showToast(err.message);
-    }
-}
-
-
-/* ================= RENDERING ================= */
-
-function renderAll() {
-    renderAnggota();
-    renderKas();
-    renderAbsensi();
-    populateAbsensiNames();
-}
-
-function renderAnggota() {
-    const table = document.getElementById("anggotaTable");
-    if (!table) return;
-
-    table.innerHTML = "";
-    if (!data.anggota || !data.anggota.length) {
-        table.innerHTML = `<tr><td colspan="6" class="empty">Belum ada calon anggota.</td></tr>`;
+    if (!isPengurus()) {
+        showToast(
+            "Hanya pengurus yang dapat melakukan sinkronisasi."
+        );
         return;
     }
 
-    data.anggota.forEach((item, index) => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-            <td>${index + 1}</td>
-            <td>${item.nama}</td>
-            <td>${item.kelas || "-"}</td>
-            <td>${item.hp || "-"}</td>
-            <td>
-                <span class="badge ${item.status === 'Aktif' ? 'hadir' : 'alpa'}">
-                    ${item.status || "Aktif"}
-                </span>
-            </td>
-            <td class="pengurus-only">
-                <button class="delete-btn" onclick="deleteAnggota('${item.id}')">Hapus</button>
-            </td>
-        `;
-        table.appendChild(tr);
-    });
-    setupUserRoleUI();
+    const button =
+        $("syncBtn");
+
+    if (button) {
+        button.disabled = true;
+        button.textContent =
+            "⏳ Menyinkronkan...";
+    }
+
+
+    try {
+
+        await loadAllData();
+
+        showToast(
+            "Data berhasil disinkronkan."
+        );
+
+    } finally {
+
+        if (button) {
+            button.disabled = false;
+            button.textContent =
+                "🔄 Sinkronisasi";
+        }
+    }
 }
 
-function renderKas() {
-    const table = document.getElementById("kasTable");
+
+/* ================= ANGGOTA ================= */
+
+function renderAnggota() {
+
+    const table =
+        $("anggotaTable");
+
     if (!table) return;
 
+
     table.innerHTML = "";
+
+
+    if (
+        !data.anggota ||
+        data.anggota.length === 0
+    ) {
+
+        table.innerHTML =
+            `<tr>
+                <td colspan="5" class="empty">
+                    Belum ada calon anggota.
+                </td>
+            </tr>`;
+
+        return;
+    }
+
+
+    data.anggota.forEach(
+        (item, index) => {
+
+            const status =
+                item.status || "Aktif";
+
+            const badgeClass =
+                String(status).toLowerCase() ===
+                "aktif"
+                    ? "hadir"
+                    : "alpa";
+
+
+            const row =
+                document.createElement("tr");
+
+
+            row.innerHTML = `
+                <td>${index + 1}</td>
+
+                <td>
+                    ${escapeHTML(item.nama || "-")}
+                </td>
+
+                <td>
+                    ${escapeHTML(item.kelas || "-")}
+                </td>
+
+                <td>
+                    ${escapeHTML(item.hp || "-")}
+                </td>
+
+                <td>
+                    <span class="badge ${badgeClass}">
+                        ${escapeHTML(status)}
+                    </span>
+                </td>
+            `;
+
+
+            table.appendChild(row);
+        }
+    );
+}
+
+
+/* ================= KAS ================= */
+
+function normalizeKasJenis(jenis) {
+
+    const value =
+        String(jenis || "")
+            .trim()
+            .toLowerCase();
+
+
+    if (
+        value === "pemasukan" ||
+        value === "masuk"
+    ) {
+        return "Masuk";
+    }
+
+
+    if (
+        value === "pengeluaran" ||
+        value === "keluar"
+    ) {
+        return "Keluar";
+    }
+
+
+    return jenis || "";
+}
+
+
+function renderKas() {
+
+    const table =
+        $("kasTable");
+
+    if (!table) return;
+
+
+    table.innerHTML = "";
+
+
     let totalMasuk = 0;
     let totalKeluar = 0;
 
-    if (!data.kas || !data.kas.length) {
-        table.innerHTML = `<tr><td colspan="6" class="empty">Belum ada catatan kas.</td></tr>`;
-    } else {
-        data.kas.forEach((item, index) => {
-            const nominal = Number(item.nominal) || 0;
-            if (item.jenis === "Masuk") totalMasuk += nominal;
-            else totalKeluar += nominal;
 
-            const tr = document.createElement("tr");
-            tr.innerHTML = `
-                <td>${index + 1}</td>
-                <td>${item.tanggal || "-"}</td>
-                <td><span class="badge ${item.jenis === 'Masuk' ? 'hadir' : 'alpa'}">${item.jenis}</span></td>
-                <td>${item.keterangan || "-"}</td>
-                <td>Rp ${nominal.toLocaleString("id-ID")}</td>
-                <td class="pengurus-only">
-                    <button class="delete-btn" onclick="deleteKas('${item.id}')">Hapus</button>
+    if (
+        !data.kas ||
+        data.kas.length === 0
+    ) {
+
+        table.innerHTML =
+            `<tr>
+                <td colspan="5" class="empty">
+                    Belum ada catatan kas.
                 </td>
-            `;
-            table.appendChild(tr);
-        });
+            </tr>`;
+
+    } else {
+
+        data.kas.forEach(
+            (item) => {
+
+                const jenis =
+                    normalizeKasJenis(
+                        item.jenis
+                    );
+
+                const nominal =
+                    Number(item.nominal) || 0;
+
+
+                if (jenis === "Masuk") {
+                    totalMasuk += nominal;
+                }
+
+                if (jenis === "Keluar") {
+                    totalKeluar += nominal;
+                }
+
+
+                const badgeClass =
+                    jenis === "Masuk"
+                        ? "hadir"
+                        : "alpa";
+
+
+                const row =
+                    document.createElement("tr");
+
+
+                row.innerHTML = `
+                    <td>
+                        ${escapeHTML(item.tanggal || "-")}
+                    </td>
+
+                    <td>
+                        <span class="badge ${badgeClass}">
+                            ${escapeHTML(
+                                jenis || "-"
+                            )}
+                        </span>
+                    </td>
+
+                    <td>
+                        ${escapeHTML(
+                            item.keterangan || "-"
+                        )}
+                    </td>
+
+                    <td>
+                        ${formatRupiah(nominal)}
+                    </td>
+
+                    <td class="pengurus-only">
+                        ${
+                            isPengurus()
+                                ? `
+                                <button
+                                    class="delete-btn"
+                                    onclick="deleteKas('${escapeHTML(item.id)}')"
+                                >
+                                    Hapus
+                                </button>
+                                `
+                                : ""
+                        }
+                    </td>
+                `;
+
+
+                table.appendChild(row);
+            }
+        );
     }
 
-    const saldo = totalMasuk - totalKeluar;
-    if (document.getElementById("totalMasuk")) document.getElementById("totalMasuk").textContent = "Rp " + totalMasuk.toLocaleString("id-ID");
-    if (document.getElementById("totalKeluar")) document.getElementById("totalKeluar").textContent = "Rp " + totalKeluar.toLocaleString("id-ID");
-    if (document.getElementById("sisaSaldo")) document.getElementById("sisaSaldo").textContent = "Rp " + saldo.toLocaleString("id-ID");
+
+    const saldo =
+        totalMasuk - totalKeluar;
+
+
+    // Summary halaman kas
+    if ($("kasMasuk")) {
+        $("kasMasuk").textContent =
+            formatRupiah(totalMasuk);
+    }
+
+    if ($("kasKeluar")) {
+        $("kasKeluar").textContent =
+            formatRupiah(totalKeluar);
+    }
+
+    if ($("kasSaldo")) {
+        $("kasSaldo").textContent =
+            formatRupiah(saldo);
+    }
+
+
+    // Summary dashboard
+    if ($("statMasuk")) {
+        $("statMasuk").textContent =
+            formatRupiah(totalMasuk);
+    }
+
+    if ($("statKeluar")) {
+        $("statKeluar").textContent =
+            formatRupiah(totalKeluar);
+    }
+
+    if ($("statSaldo")) {
+        $("statSaldo").textContent =
+            formatRupiah(saldo);
+    }
+
 
     setupUserRoleUI();
 }
 
+
+/* ================= ABSENSI ================= */
+
 function renderAbsensi() {
-    const table = document.getElementById("absensiTable");
+
+    const table =
+        $("absensiTable");
+
     if (!table) return;
 
+
     table.innerHTML = "";
-    if (!data.absensi || !data.absensi.length) {
-        table.innerHTML = `<tr><td colspan="6" class="empty">Belum ada catatan absensi.</td></tr>`;
+
+
+    if (
+        !data.absensi ||
+        data.absensi.length === 0
+    ) {
+
+        table.innerHTML =
+            `<tr>
+                <td colspan="5" class="empty">
+                    Belum ada catatan absensi.
+                </td>
+            </tr>`;
+
         return;
     }
 
-    data.absensi.forEach((item, index) => {
-        let badgeClass = "hadir";
-        if (item.status === "Izin" || item.status === "Sakit") badgeClass = "izin";
-        else if (item.status === "Alpa") badgeClass = "alpa";
 
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-            <td>${index + 1}</td>
-            <td>${item.tanggal || "-"}</td>
-            <td>${item.nama}</td>
-            <td><span class="badge ${badgeClass}">${item.status}</span></td>
-            <td>${item.keterangan || "-"}</td>
-            <td class="pengurus-only">
-                <button class="delete-btn" onclick="deleteAbsensi('${item.id}')">Hapus</button>
-            </td>
-        `;
-        table.appendChild(tr);
-    });
+    data.absensi.forEach(
+        (item) => {
+
+            let badgeClass =
+                "hadir";
+
+
+            if (
+                item.status === "Izin" ||
+                item.status === "Sakit"
+            ) {
+                badgeClass = "izin";
+            }
+
+
+            if (
+                item.status === "Alpa"
+            ) {
+                badgeClass = "alpa";
+            }
+
+
+            const row =
+                document.createElement("tr");
+
+
+            row.innerHTML = `
+                <td>
+                    ${escapeHTML(
+                        item.tanggal || "-"
+                    )}
+                </td>
+
+                <td>
+                    ${escapeHTML(
+                        item.nama || "-"
+                    )}
+                </td>
+
+                <td>
+                    <span class="badge ${badgeClass}">
+                        ${escapeHTML(
+                            item.status || "-"
+                        )}
+                    </span>
+                </td>
+
+                <td>
+                    ${escapeHTML(
+                        item.keterangan || "-"
+                    )}
+                </td>
+
+                <td class="pengurus-only">
+                    ${
+                        isPengurus()
+                            ? `
+                            <button
+                                class="delete-btn"
+                                onclick="deleteAbsensi('${escapeHTML(item.id)}')"
+                            >
+                                Hapus
+                            </button>
+                            `
+                            : ""
+                    }
+                </td>
+            `;
+
+
+            table.appendChild(row);
+        }
+    );
+
 
     setupUserRoleUI();
 }
 
+
 function populateAbsensiNames() {
-    const select = document.getElementById("absensiNamaSelect");
+
+    const select =
+        $("absensiNama");
+
+
     if (!select) return;
 
-    select.innerHTML = `<option value="">-- Pilih Anggota --</option>`;
-    if (data.anggota && data.anggota.length) {
-        data.anggota.forEach(item => {
-            const opt = document.createElement("option");
-            opt.value = item.nama;
-            opt.textContent = `${item.nama} (${item.kelas || '-'})`;
-            select.appendChild(opt);
-        });
+
+    select.innerHTML =
+        `<option value="">
+            -- Pilih Anggota --
+        </option>`;
+
+
+    if (
+        !data.anggota ||
+        data.anggota.length === 0
+    ) {
+
+        select.innerHTML =
+            `<option value="">
+                Belum ada calon anggota
+            </option>`;
+
+        return;
+    }
+
+
+    data.anggota.forEach(
+        (item) => {
+
+            const option =
+                document.createElement("option");
+
+
+            option.value =
+                item.nama || "";
+
+
+            option.textContent =
+                `${item.nama || "-"} (${item.kelas || "-"})`;
+
+
+            select.appendChild(
+                option
+            );
+        }
+    );
+}
+
+
+/* ================= DASHBOARD ================= */
+
+function renderDashboard() {
+
+    const totalAnggota =
+        data.anggota?.length || 0;
+
+
+    let totalMasuk = 0;
+    let totalKeluar = 0;
+
+
+    (data.kas || []).forEach(
+        (item) => {
+
+            const jenis =
+                normalizeKasJenis(
+                    item.jenis
+                );
+
+            const nominal =
+                Number(item.nominal) || 0;
+
+
+            if (jenis === "Masuk") {
+                totalMasuk += nominal;
+            }
+
+
+            if (jenis === "Keluar") {
+                totalKeluar += nominal;
+            }
+        }
+    );
+
+
+    const saldo =
+        totalMasuk - totalKeluar;
+
+
+    if ($("statAnggota")) {
+        $("statAnggota").textContent =
+            totalAnggota;
+    }
+
+    if ($("statMasuk")) {
+        $("statMasuk").textContent =
+            formatRupiah(totalMasuk);
+    }
+
+    if ($("statKeluar")) {
+        $("statKeluar").textContent =
+            formatRupiah(totalKeluar);
+    }
+
+    if ($("statSaldo")) {
+        $("statSaldo").textContent =
+            formatRupiah(saldo);
+    }
+
+
+    renderDashboardAbsensi();
+    renderDashboardKas();
+}
+
+
+function renderDashboardAbsensi() {
+
+    const table =
+        $("dashboardAbsensi");
+
+    if (!table) return;
+
+
+    table.innerHTML = "";
+
+
+    const items =
+        [...(data.absensi || [])]
+            .reverse()
+            .slice(0, 5);
+
+
+    if (items.length === 0) {
+
+        table.innerHTML =
+            `<tr>
+                <td colspan="3" class="empty">
+                    Belum ada data absensi.
+                </td>
+            </tr>`;
+
+        return;
+    }
+
+
+    items.forEach(
+        (item) => {
+
+            let badgeClass =
+                "hadir";
+
+
+            if (
+                item.status === "Izin" ||
+                item.status === "Sakit"
+            ) {
+                badgeClass = "izin";
+            }
+
+
+            if (
+                item.status === "Alpa"
+            ) {
+                badgeClass = "alpa";
+            }
+
+
+            const row =
+                document.createElement("tr");
+
+
+            row.innerHTML = `
+                <td>
+                    ${escapeHTML(
+                        item.tanggal || "-"
+                    )}
+                </td>
+
+                <td>
+                    ${escapeHTML(
+                        item.nama || "-"
+                    )}
+                </td>
+
+                <td>
+                    <span class="badge ${badgeClass}">
+                        ${escapeHTML(
+                            item.status || "-"
+                        )}
+                    </span>
+                </td>
+            `;
+
+
+            table.appendChild(row);
+        }
+    );
+}
+
+
+function renderDashboardKas() {
+
+    const table =
+        $("dashboardKas");
+
+    if (!table) return;
+
+
+    table.innerHTML = "";
+
+
+    const items =
+        [...(data.kas || [])]
+            .reverse()
+            .slice(0, 5);
+
+
+    if (items.length === 0) {
+
+        table.innerHTML =
+            `<tr>
+                <td colspan="3" class="empty">
+                    Belum ada transaksi kas.
+                </td>
+            </tr>`;
+
+        return;
+    }
+
+
+    items.forEach(
+        (item) => {
+
+            const nominal =
+                Number(item.nominal) || 0;
+
+
+            const row =
+                document.createElement("tr");
+
+
+            row.innerHTML = `
+                <td>
+                    ${escapeHTML(
+                        item.tanggal || "-"
+                    )}
+                </td>
+
+                <td>
+                    ${escapeHTML(
+                        item.keterangan || "-"
+                    )}
+                </td>
+
+                <td>
+                    ${formatRupiah(nominal)}
+                </td>
+            `;
+
+
+            table.appendChild(row);
+        }
+    );
+}
+
+
+/* ================= ADD KAS ================= */
+
+async function handleAddKas(event) {
+
+    event.preventDefault();
+
+
+    if (!isPengurus()) {
+
+        showToast(
+            "Hanya pengurus yang dapat menambah kas."
+        );
+
+        return;
+    }
+
+
+    const jenisValue =
+        $("kasJenis")?.value;
+
+
+    const keterangan =
+        $("kasKeterangan")?.value.trim();
+
+
+    const nominal =
+        $("kasNominal")?.value;
+
+
+    if (
+        !jenisValue ||
+        !keterangan ||
+        !nominal
+    ) {
+
+        showToast(
+            "Semua data transaksi wajib diisi."
+        );
+
+        return;
+    }
+
+
+    // HTML memakai Pemasukan/Pengeluaran,
+    // backend memakai Masuk/Keluar.
+    const jenis =
+        normalizeKasJenis(
+            jenisValue
+        );
+
+
+    try {
+
+        await callAPI(
+            "addKas",
+            {
+                jenis: jenis,
+                keterangan: keterangan,
+                nominal: nominal,
+                username:
+                    currentUser.username
+            }
+        );
+
+
+        closeModal(
+            "kasModal"
+        );
+
+
+        event.target.reset();
+
+
+        await loadAllData();
+
+
+        showToast(
+            "Transaksi kas berhasil disimpan."
+        );
+
+
+    } catch (error) {
+
+        showToast(
+            "Gagal menyimpan kas: " +
+            error.message
+        );
     }
 }
+
+
+/* ================= DELETE KAS ================= */
+
+async function deleteKas(id) {
+
+    if (!isPengurus()) {
+        showToast(
+            "Anda tidak memiliki akses."
+        );
+        return;
+    }
+
+
+    if (
+        !confirm(
+            "Apakah Anda yakin ingin menghapus transaksi ini?"
+        )
+    ) {
+        return;
+    }
+
+
+    try {
+
+        await callAPI(
+            "deleteKas",
+            {
+                id: id,
+                username:
+                    currentUser.username
+            }
+        );
+
+
+        await loadAllData();
+
+
+        showToast(
+            "Transaksi berhasil dihapus."
+        );
+
+
+    } catch (error) {
+
+        showToast(
+            "Gagal menghapus transaksi: " +
+            error.message
+        );
+    }
+}
+
+
+/* ================= ADD ABSENSI ================= */
+
+async function handleAddAbsensi(event) {
+
+    event.preventDefault();
+
+
+    if (!isPengurus()) {
+
+        showToast(
+            "Hanya pengurus yang dapat menginput absensi."
+        );
+
+        return;
+    }
+
+
+    const tanggal =
+        $("absensiTanggal")?.value;
+
+
+    const nama =
+        $("absensiNama")?.value;
+
+
+    const status =
+        $("absensiStatus")?.value;
+
+
+    const keterangan =
+        $("absensiKeterangan")?.value.trim();
+
+
+    if (!tanggal || !nama || !status) {
+
+        showToast(
+            "Tanggal, nama, dan status wajib diisi."
+        );
+
+        return;
+    }
+
+
+    try {
+
+        await callAPI(
+            "addAbsensi",
+            {
+                tanggal: tanggal,
+                nama: nama,
+                status: status,
+                keterangan:
+                    keterangan || "-",
+                username:
+                    currentUser.username
+            }
+        );
+
+
+        closeModal(
+            "absensiModal"
+        );
+
+
+        event.target.reset();
+
+
+        await loadAllData();
+
+
+        showToast(
+            "Absensi berhasil dicatat."
+        );
+
+
+    } catch (error) {
+
+        showToast(
+            "Gagal menyimpan absensi: " +
+            error.message
+        );
+    }
+}
+
+
+/* ================= DELETE ABSENSI ================= */
+
+async function deleteAbsensi(id) {
+
+    if (!isPengurus()) {
+
+        showToast(
+            "Anda tidak memiliki akses."
+        );
+
+        return;
+    }
+
+
+    if (
+        !confirm(
+            "Apakah Anda yakin ingin menghapus absensi ini?"
+        )
+    ) {
+        return;
+    }
+
+
+    try {
+
+        await callAPI(
+            "deleteAbsensi",
+            {
+                id: id,
+                username:
+                    currentUser.username
+            }
+        );
+
+
+        await loadAllData();
+
+
+        showToast(
+            "Absensi berhasil dihapus."
+        );
+
+
+    } catch (error) {
+
+        showToast(
+            "Gagal menghapus absensi: " +
+            error.message
+        );
+    }
+}
+
+
+/* ================= RENDER SEMUA ================= */
+
+function renderAll() {
+
+    renderDashboard();
+
+    renderAnggota();
+
+    renderKas();
+
+    renderAbsensi();
+
+    populateAbsensiNames();
+
+    setupUserRoleUI();
+}
+
+
+/* ================= GLOBAL FUNCTIONS =================
+   Fungsi ini sengaja ditempel ke window supaya
+   onclick="deleteKas(...)" dan onclick="deleteAbsensi(...)"
+   tetap bisa bekerja dari HTML hasil render.
+   ===================================================== */
+
+window.deleteKas = deleteKas;
+window.deleteAbsensi = deleteAbsensi;
+window.showPage = showPage;
+window.openModal = openModal;
+window.closeModal = closeModal;
+window.syncData = syncData;
