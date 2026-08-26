@@ -75,37 +75,90 @@ function closeModal(id) {
 
 function checkSession() {
     const saved = localStorage.getItem("stepa_user");
+
     if (saved) {
-        currentUser = JSON.parse(saved);
-        showMainApp();
+        try {
+            currentUser = JSON.parse(saved);
+            showMainApp();
+        } catch (error) {
+            localStorage.removeItem("stepa_user");
+            currentUser = null;
+            showLoginPage();
+        }
     } else {
         showLoginPage();
     }
 }
 
+
 function showLoginPage() {
-    document.getElementById("loginSection").style.display = "flex";
-    document.getElementById("appSection").style.display = "none";
+
+    const loginPage = document.getElementById("loginPage");
+    const appPage = document.getElementById("appPage");
+
+    if (loginPage) {
+        loginPage.style.display = "flex";
+    }
+
+    if (appPage) {
+        appPage.classList.add("hidden");
+        appPage.style.display = "none";
+    }
 }
 
+
 function showMainApp() {
-    document.getElementById("loginSection").style.display = "none";
-    document.getElementById("appSection").style.display = "block";
-    
-    document.getElementById("userDisplayName").textContent = currentUser.nama;
-    document.getElementById("userRoleBadge").textContent = currentUser.role;
+
+    const loginPage = document.getElementById("loginPage");
+    const appPage = document.getElementById("appPage");
+
+    if (loginPage) {
+        loginPage.style.display = "none";
+    }
+
+    if (appPage) {
+        appPage.classList.remove("hidden");
+        appPage.style.display = "flex";
+    }
+
+    const userName = document.getElementById("userName");
+    const userRole = document.getElementById("userRole");
+    const userAvatar = document.getElementById("userAvatar");
+
+    if (userName) {
+        userName.textContent = currentUser.nama || currentUser.username;
+    }
+
+    if (userRole) {
+        userRole.textContent = currentUser.role || "Anggota";
+    }
+
+    if (userAvatar) {
+        userAvatar.textContent =
+            (currentUser.nama || currentUser.username)
+            .charAt(0)
+            .toUpperCase();
+    }
 
     setupUserRoleUI();
+
     loadAllData();
 }
 
+
 function setupUserRoleUI() {
-    const isPengurus = currentUser && currentUser.role.toLowerCase() === "pengurus";
+
+    const isPengurus =
+        currentUser &&
+        String(currentUser.role || "").toLowerCase() === "pengurus";
+
     document.querySelectorAll(".pengurus-only").forEach(el => {
-        el.style.display = isPengurus ? "" : "none";
+
+        el.style.display =
+            isPengurus ? "" : "none";
+
     });
 }
-
 
 /* ================= EVENT LISTENERS ================= */
 
@@ -167,18 +220,98 @@ function setupEventListeners() {
 /* ================= API ACTIONS ================= */
 
 async function handleLogin(e) {
+
     e.preventDefault();
-    const u = document.getElementById("username").value.trim();
-    const p = document.getElementById("password").value.trim();
+
+    const usernameInput =
+        document.getElementById("username");
+
+    const passwordInput =
+        document.getElementById("password");
+
+    const message =
+        document.getElementById("loginMessage");
+
+    const username =
+        usernameInput.value.trim();
+
+    const password =
+        passwordInput.value.trim();
+
+
+    if (!username || !password) {
+
+        if (message) {
+            message.textContent =
+                "Username dan password wajib diisi.";
+        }
+
+        return;
+    }
+
+
+    if (message) {
+        message.textContent =
+            "Sedang masuk...";
+    }
+
 
     try {
-        const res = await callAPI("login", { username: u, password: p });
-        currentUser = res.data;
-        localStorage.setItem("stepa_user", JSON.stringify(currentUser));
-        showToast("Login berhasil! Selamat datang " + currentUser.nama);
+
+        const response =
+            await callAPI("login", {
+                username: username,
+                password: password
+            });
+
+
+        if (!response.success) {
+            throw new Error(
+                response.message ||
+                "Login gagal."
+            );
+        }
+
+
+        currentUser =
+            response.data;
+
+
+        localStorage.setItem(
+            "stepa_user",
+            JSON.stringify(currentUser)
+        );
+
+
+        if (message) {
+            message.textContent = "";
+        }
+
+
         showMainApp();
-    } catch (err) {
-        showToast("Login gagal: " + err.message);
+
+
+        showToast(
+            "Login berhasil! Selamat datang " +
+            currentUser.nama
+        );
+
+
+    } catch (error) {
+
+        if (message) {
+
+            message.textContent =
+                "Login gagal: " +
+                error.message;
+
+        }
+
+        console.error(
+            "LOGIN ERROR:",
+            error
+        );
+
     }
 }
 
