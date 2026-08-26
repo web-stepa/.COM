@@ -1535,3 +1535,18 @@ td:first-child {
     }
 
 }
+
+/* =========================================================
+   STEPA — MANAJEMEN AKUN
+   ========================================================= */
+.account-page{display:grid;gap:18px}
+.account-hero{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:24px;border:1px solid var(--border,#e5e7eb);border-radius:20px;background:linear-gradient(135deg,#ffffff,#f8fbff);box-shadow:0 12px 30px rgba(15,23,42,.06)}
+.account-kicker{font-size:10px;font-weight:800;letter-spacing:1.5px;color:var(--primary,#2563eb);margin-bottom:5px}
+.account-hero h2{margin:0;font-size:22px}.account-hero p{margin:5px 0 0;color:var(--text-light,#64748b);font-size:12px}
+.account-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.account-stats>div{padding:16px 18px;border:1px solid var(--border,#e5e7eb);border-radius:16px;background:#fff}.account-stats span{display:block;color:#64748b;font-size:11px}.account-stats strong{display:block;margin-top:5px;font-size:22px;color:#0f172a}
+.account-panel,.password-panel{padding:0;overflow:hidden}.account-panel .panel-header,.password-panel .panel-header{padding:18px 20px;border-bottom:1px solid #eef2f7}.account-panel .panel-header h2,.password-panel .panel-header h2{margin:0;font-size:15px}.account-panel .panel-header p,.password-panel .panel-header p{margin:4px 0 0;color:#64748b;font-size:11px}
+.account-table-wrap{overflow:auto}.users-table{width:100%;border-collapse:collapse;min-width:650px}.users-table th{padding:12px 16px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#64748b;background:#f8fafc;border-bottom:1px solid #e5e7eb}.users-table td{padding:13px 16px;border-bottom:1px solid #eef2f7;font-size:12px;color:#334155}.users-table tr:last-child td{border-bottom:0}.users-table tr:hover td{background:#fbfdff}
+.role-pill,.status-pill{display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;font-size:10px;font-weight:800}.role-admin{background:#eef2ff;color:#4f46e5}.role-member{background:#f1f5f9;color:#475569}.status-active{background:#ecfdf5;color:#047857}.status-off{background:#fef2f2;color:#b91c1c}.user-actions{white-space:nowrap}.small-btn{border:1px solid #dbeafe;background:#f8fbff;color:#2563eb;padding:7px 10px;border-radius:9px;cursor:pointer;font-size:11px;font-weight:700}.danger-btn{border:1px solid #fecaca;background:#fff7f7;color:#dc2626;padding:7px 10px;border-radius:9px;cursor:pointer;font-size:11px;font-weight:700}.current-user{font-size:10px;color:#94a3b8}.empty-state{text-align:center;padding:40px;color:#94a3b8;font-size:12px}
+.password-form{display:flex;gap:10px;flex-wrap:wrap;padding:18px 20px}.password-form input{flex:1;min-width:180px}.password-form button{flex-shrink:0}.secondary-btn{border:1px solid #e2e8f0;background:#f8fafc;color:#475569;padding:11px 15px;border-radius:10px;cursor:pointer;font-weight:700}.account-modal-card{width:520px}.account-form{display:grid;gap:12px}.account-form label{display:grid;gap:6px;font-size:11px;font-weight:700;color:#334155}.account-form input,.account-form select{width:100%;box-sizing:border-box}.account-form-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:5px}.modal-close{border:0;background:#f1f5f9;border-radius:9px;width:34px;height:34px;cursor:pointer;font-size:20px;color:#475569}
+#uploadAnggota{border:1px solid #dbeafe;background:#f8fbff;color:#2563eb;border-radius:10px;padding:9px 12px;font-weight:700;cursor:pointer}
+@media(max-width:700px){.account-hero{align-items:flex-start;flex-direction:column}.account-stats{grid-template-columns:1fr}.password-form{flex-direction:column}.password-form input,.password-form button{width:100%}.account-modal-card{width:100%}}
