@@ -77,22 +77,18 @@ function showPage(n){
 
 /* ---------- ACCOUNT MANAGEMENT ---------- */
 function injectAccount(){
- if(!pengurus()||$("akunPage"))return;
- const host=$("appPage")||document.body,page=document.createElement("section");page.id="akunPage";page.className="page";
- page.innerHTML=`<div class="account-page">
- <div class="account-hero"><div><div class="account-kicker">PENGURUS</div><h2>Manajemen Akun</h2><p>Kelola username, password, nama, role, dan status akun langsung dari website.</p></div><button id="newAccount" class="primary-btn">＋ Tambah Akun</button></div>
- <div class="account-stats"><div><span>Total Akun</span><strong id="userCount">0</strong></div><div><span>Pengurus</span><strong id="adminCount">0</strong></div><div><span>Anggota</span><strong id="memberCount">0</strong></div></div>
- <div class="panel account-panel"><div class="panel-header"><div><h2>Daftar Akun</h2><p>Akun yang tersimpan di sheet Users.</p></div></div><div id="usersTable" class="account-table-wrap"></div></div>
- <div class="panel password-panel"><div class="panel-header"><div><h2>Ubah Password Saya</h2><p>Ganti password akun yang sedang digunakan.</p></div></div><form id="myPass" class="password-form"><input id="oldPass" type="password" placeholder="Password lama" required><input id="newPass" type="password" placeholder="Password baru (min. 4 karakter)" required><button class="primary-btn">Simpan Password</button></form></div>
- </div>
- <div id="accountModal" class="modal"><div class="modal-card account-modal-card"><div class="modal-header"><div><h2 id="accountTitle">Tambah Akun</h2><p>Isi data akun STEPA.</p></div><button type="button" id="closeAccount" class="modal-close">×</button></div><form id="accountForm" class="account-form"><input type="hidden" id="oldU"><label>Username<input id="accU" autocomplete="off" required></label><label>Password<input id="accP" type="password" autocomplete="new-password" placeholder="Kosongkan jika tidak ingin mengubah"></label><label>Nama<input id="accN" required></label><label>Role<select id="accR"><option>Anggota</option><option>Pengurus</option></select></label><label>Status<select id="accA"><option value="TRUE">Aktif</option><option value="FALSE">Nonaktif</option></select></label><div class="account-form-actions"><button type="button" id="cancelAccount" class="secondary-btn">Batal</button><button class="primary-btn">Simpan Akun</button></div></form></div></div>`;
- host.appendChild(page);
- $("newAccount").onclick=()=>editAccount();
- $("closeAccount").onclick=()=>modal("accountModal",false);$("cancelAccount").onclick=()=>modal("accountModal",false);
- $("accountForm").onsubmit=saveAccount;
- $("myPass").onsubmit=changePass;
- const nav=document.querySelector(".nav-item")?.parentElement;
- if(nav){const b=document.createElement("button");b.className="nav-item pengurus-only";b.dataset.page="akun";b.innerHTML="⚙️ Manajemen Akun";b.onclick=()=>showPage("akun");nav.appendChild(b)}
+ const nav=$("accountNav");
+ if(!nav)return;
+ if(!pengurus()){nav.style.display="none";return;}
+ nav.style.display="flex";
+ if($("newAccount") && !$("newAccount").dataset.ready){
+   $("newAccount").dataset.ready="1";
+   $("newAccount").onclick=()=>editAccount();
+   $("closeAccount").onclick=()=>modal("accountModal",false);
+   $("cancelAccount").onclick=()=>modal("accountModal",false);
+   $("accountForm").onsubmit=saveAccount;
+   $("myPass").onsubmit=changePass;
+ }
 }
 async function loadUsers(){
  if(!pengurus())return;
@@ -104,6 +100,7 @@ function editAccount(u=null){
 }
 async function saveAccount(e){
  e.preventDefault();const oldU=$("oldU").value,u=$("accU").value.trim(),p=$("accP").value,n=$("accN").value.trim(),role=$("accR").value,aktif=$("accA").value;
+ if(!oldU && !p){toast("Password wajib diisi untuk akun baru.");return;}
  try{
   const r=await api(oldU?"updateUser":"addUser",{...auth(),oldUsername:oldU,username:u,password:p,nama:n,role,aktif});
   if(oldU&&oldU.toLowerCase()===currentUser.username.toLowerCase()){currentUser.username=u;currentUser.nama=n;currentUser.role=role;if(p)currentUser.password=p;localStorage.setItem("stepa_user",JSON.stringify(currentUser));info()}
