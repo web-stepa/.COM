@@ -99,6 +99,11 @@
                 <span>Calon Anggota</span>
             </button>
 
+            <button id="accountNav" class="nav-item pengurus-only" data-page="akun" style="display:none">
+                ⚙️
+                <span>Manajemen Akun</span>
+            </button>
+
         </nav>
 
         <div class="sidebar-bottom">
@@ -560,6 +565,58 @@
 
 </div>
 
+
+<!-- ================= MANAJEMEN AKUN ================= -->
+<section id="akunPage" class="page">
+    <div class="account-page">
+        <div class="account-hero">
+            <div>
+                <div class="account-kicker">PENGURUS</div>
+                <h2>Manajemen Akun</h2>
+                <p>Kelola username, password, nama, role, dan status akun langsung dari website.</p>
+            </div>
+            <button id="newAccount" class="primary-btn" type="button">＋ Tambah Akun</button>
+        </div>
+        <div class="account-stats">
+            <div><span>Total Akun</span><strong id="userCount">0</strong></div>
+            <div><span>Pengurus</span><strong id="adminCount">0</strong></div>
+            <div><span>Anggota</span><strong id="memberCount">0</strong></div>
+        </div>
+        <div class="panel account-panel">
+            <div class="panel-header"><div><h2>Daftar Akun</h2><p>Akun yang tersimpan di sheet Users.</p></div></div>
+            <div id="usersTable" class="account-table-wrap"></div>
+        </div>
+        <div class="panel password-panel">
+            <div class="panel-header"><div><h2>Ubah Password Saya</h2><p>Ganti password akun yang sedang digunakan.</p></div></div>
+            <form id="myPass" class="password-form">
+                <input id="oldPass" type="password" placeholder="Password lama" required>
+                <input id="newPass" type="password" placeholder="Password baru (min. 4 karakter)" required>
+                <button class="primary-btn" type="submit">Simpan Password</button>
+            </form>
+        </div>
+    </div>
+</section>
+
+<div id="accountModal" class="modal">
+    <div class="modal-card account-modal-card">
+        <div class="modal-header">
+            <div><h2 id="accountTitle">Tambah Akun</h2><p>Isi data akun STEPA.</p></div>
+            <button type="button" id="closeAccount" class="modal-close">×</button>
+        </div>
+        <form id="accountForm" class="account-form">
+            <input type="hidden" id="oldU">
+            <label>Username<input id="accU" autocomplete="off" required></label>
+            <label>Password<input id="accP" type="password" autocomplete="new-password" placeholder="Wajib diisi untuk akun baru"></label>
+            <label>Nama<input id="accN" required></label>
+            <label>Role<select id="accR"><option>Anggota</option><option>Pengurus</option></select></label>
+            <label>Status<select id="accA"><option value="TRUE">Aktif</option><option value="FALSE">Nonaktif</option></select></label>
+            <div class="account-form-actions">
+                <button type="button" id="cancelAccount" class="secondary-btn">Batal</button>
+                <button class="primary-btn" type="submit">Simpan Akun</button>
+            </div>
+        </form>
+    </div>
+</div>
 
 <div id="toast" class="toast"></div>
 
