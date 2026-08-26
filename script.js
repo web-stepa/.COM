@@ -37,8 +37,17 @@ document.addEventListener("DOMContentLoaded",()=>{
 function checkSession(){
  try{const x=JSON.parse(localStorage.getItem("stepa_user")||"null");if(!x?.username)throw 0;currentUser=x;showApp()}catch(e){showLogin()}
 }
-function showLogin(){if($("loginPage"))$("loginPage").style.display="flex";if($("appPage"))$("appPage").style.display="none"}
-function showApp(){if($("loginPage"))$("loginPage").style.display="none";if($("appPage"))$("appPage").style.display="";info();injectAccount();showPage("dashboard");loadData()}
+function showLogin(){
+ const l=$("loginPage"),a=$("appPage");
+ if(l){l.classList.remove("hidden");l.style.display="flex"}
+ if(a){a.classList.add("hidden");a.style.display="none"}
+}
+function showApp(){
+ const l=$("loginPage"),a=$("appPage");
+ if(l){l.classList.add("hidden");l.style.display="none"}
+ if(a){a.classList.remove("hidden");a.style.display="flex"}
+ info();injectAccount();showPage("dashboard");loadData()
+}
 function info(){if($("userName"))$("userName").textContent=currentUser.nama;if($("userRole"))$("userRole").textContent=currentUser.role;if($("userAvatar"))$("userAvatar").textContent=(currentUser.nama||"U")[0].toUpperCase()}
 function logout(){currentUser=null;localStorage.removeItem("stepa_user");showLogin()}
 
@@ -70,14 +79,16 @@ function showPage(n){
 function injectAccount(){
  if(!pengurus()||$("akunPage"))return;
  const host=$("appPage")||document.body,page=document.createElement("section");page.id="akunPage";page.className="page";
- page.innerHTML=`<div style="padding:20px;border-radius:16px;background:var(--card,#fff)">
- <div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div><h2>Manajemen Akun</h2><p>Ubah username, password, nama, role, dan status tanpa mengedit Google Sheets.</p></div><button id="newAccount">＋ Tambah Akun</button></div>
- <div id="usersTable" style="overflow:auto;margin-top:18px"></div>
- <hr><h3>Ubah Password Saya</h3><form id="myPass" style="display:grid;gap:10px;max-width:480px"><input id="oldPass" type="password" placeholder="Password lama" required><input id="newPass" type="password" placeholder="Password baru" required><button>Simpan Password</button></form></div>
- <div id="accountModal" class="modal"><div class="modal-content" style="max-width:520px"><button type="button" id="closeAccount">×</button><h2 id="accountTitle">Tambah Akun</h2><form id="accountForm" style="display:grid;gap:10px"><input type="hidden" id="oldU"><input id="accU" placeholder="Username" required><input id="accP" type="password" placeholder="Password"><input id="accN" placeholder="Nama" required><select id="accR"><option>Anggota</option><option>Pengurus</option></select><select id="accA"><option value="TRUE">Aktif</option><option value="FALSE">Nonaktif</option></select><button>Simpan</button></form></div></div>`;
+ page.innerHTML=`<div class="account-page">
+ <div class="account-hero"><div><div class="account-kicker">PENGURUS</div><h2>Manajemen Akun</h2><p>Kelola username, password, nama, role, dan status akun langsung dari website.</p></div><button id="newAccount" class="primary-btn">＋ Tambah Akun</button></div>
+ <div class="account-stats"><div><span>Total Akun</span><strong id="userCount">0</strong></div><div><span>Pengurus</span><strong id="adminCount">0</strong></div><div><span>Anggota</span><strong id="memberCount">0</strong></div></div>
+ <div class="panel account-panel"><div class="panel-header"><div><h2>Daftar Akun</h2><p>Akun yang tersimpan di sheet Users.</p></div></div><div id="usersTable" class="account-table-wrap"></div></div>
+ <div class="panel password-panel"><div class="panel-header"><div><h2>Ubah Password Saya</h2><p>Ganti password akun yang sedang digunakan.</p></div></div><form id="myPass" class="password-form"><input id="oldPass" type="password" placeholder="Password lama" required><input id="newPass" type="password" placeholder="Password baru (min. 4 karakter)" required><button class="primary-btn">Simpan Password</button></form></div>
+ </div>
+ <div id="accountModal" class="modal"><div class="modal-card account-modal-card"><div class="modal-header"><div><h2 id="accountTitle">Tambah Akun</h2><p>Isi data akun STEPA.</p></div><button type="button" id="closeAccount" class="modal-close">×</button></div><form id="accountForm" class="account-form"><input type="hidden" id="oldU"><label>Username<input id="accU" autocomplete="off" required></label><label>Password<input id="accP" type="password" autocomplete="new-password" placeholder="Kosongkan jika tidak ingin mengubah"></label><label>Nama<input id="accN" required></label><label>Role<select id="accR"><option>Anggota</option><option>Pengurus</option></select></label><label>Status<select id="accA"><option value="TRUE">Aktif</option><option value="FALSE">Nonaktif</option></select></label><div class="account-form-actions"><button type="button" id="cancelAccount" class="secondary-btn">Batal</button><button class="primary-btn">Simpan Akun</button></div></form></div></div>`;
  host.appendChild(page);
  $("newAccount").onclick=()=>editAccount();
- $("closeAccount").onclick=()=>modal("accountModal",false);
+ $("closeAccount").onclick=()=>modal("accountModal",false);$("cancelAccount").onclick=()=>modal("accountModal",false);
  $("accountForm").onsubmit=saveAccount;
  $("myPass").onsubmit=changePass;
  const nav=document.querySelector(".nav-item")?.parentElement;
@@ -85,7 +96,7 @@ function injectAccount(){
 }
 async function loadUsers(){
  if(!pengurus())return;
- try{const r=await api("listUsers",auth());$("usersTable").innerHTML=`<table style="width:100%;border-collapse:collapse"><thead><tr><th>Username</th><th>Nama</th><th>Role</th><th>Status</th><th>Aksi</th></tr></thead><tbody>${r.data.map(u=>`<tr><td>${esc(u.username)}</td><td>${esc(u.nama)}</td><td>${esc(u.role)}</td><td>${u.aktif?"Aktif":"Nonaktif"}</td><td><button onclick='window.editAccount(${JSON.stringify(u)})'>Edit</button> ${u.username.toLowerCase()!==currentUser.username.toLowerCase()?`<button onclick='window.delAccount("${esc(u.username)}")'>Hapus</button>`:""}</td></tr>`).join("")}</tbody></table>`}
+ try{const r=await api("listUsers",auth());const users=r.data||[];if($("userCount"))$("userCount").textContent=users.length;if($("adminCount"))$("adminCount").textContent=users.filter(u=>String(u.role).toLowerCase()==="pengurus").length;if($("memberCount"))$("memberCount").textContent=users.filter(u=>String(u.role).toLowerCase()==="anggota").length;$("usersTable").innerHTML=users.length?`<table class="users-table"><thead><tr><th>Username</th><th>Nama</th><th>Role</th><th>Status</th><th>Aksi</th></tr></thead><tbody>${users.map(u=>`<tr><td><strong>${esc(u.username)}</strong></td><td>${esc(u.nama)}</td><td><span class="role-pill ${String(u.role).toLowerCase()==="pengurus"?"role-admin":"role-member"}">${esc(u.role)}</span></td><td><span class="status-pill ${u.aktif?"status-active":"status-off"}">${u.aktif?"Aktif":"Nonaktif"}</span></td><td class="user-actions"><button class="small-btn" onclick='window.editAccount(${JSON.stringify(u)})'>✏️ Edit</button> ${u.username.toLowerCase()!==currentUser.username.toLowerCase()?`<button class="danger-btn" onclick='window.delAccount("${esc(u.username)}")'>🗑️ Hapus</button>`:"<span class="current-user">Akun saya</span>"}</td></tr>`).join("")}</tbody></table>`:`<div class="empty-state">Belum ada akun.</div>`}
  catch(e){toast(e.message)}
 }
 function editAccount(u=null){
