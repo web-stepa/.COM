@@ -301,7 +301,7 @@ function renderDashboard() {
 }
 
 /* =========================================================
-   RENDER ANGGOTA & FUNGSI HAPUS
+   RENDER & HAPUS ANGGOTA
    ========================================================= */
 function renderAnggota() {
     const t = $("anggotaTable");
@@ -334,15 +334,12 @@ function deleteAnggota(index) {
     const targetNama = data.anggota[index]?.nama;
     if (!confirm(`Apakah kamu yakin ingin menghapus data "${targetNama}"?`)) return;
 
-    // Hapus dari memori lokal web
     data.anggota.splice(index, 1);
 
-    // Hapus dari localStorage browser
     const localAnggota = JSON.parse(localStorage.getItem("stepa_local_anggota") || "[]");
     const updatedLocal = localAnggota.filter(x => x.nama !== targetNama);
     localStorage.setItem("stepa_local_anggota", JSON.stringify(updatedLocal));
 
-    // Perbarui tabel & dropdown nama
     renderAnggota();
     populateNames();
     if ($("statAnggota")) $("statAnggota").textContent = data.anggota.length;
@@ -350,11 +347,8 @@ function deleteAnggota(index) {
     toast(`Data "${targetNama}" berhasil dihapus.`);
 }
 
-// Pastikan fungsi bisa diakses dari tombol onclick tabel
-window.deleteAnggota = deleteAnggota;
-
 /* =========================================================
-   RENDER KAS & FUNGSI HAPUS KAS
+   RENDER & HAPUS KAS
    ========================================================= */
 function renderKas() {
     const t = $("kasTable");
@@ -388,49 +382,18 @@ function deleteKas(index) {
 
     if (!confirm(`Apakah kamu yakin ingin menghapus catatan kas "${ket}"?`)) return;
 
-    // Hapus dari array kas
     data.kas.splice(index, 1);
 
-    // Hapus dari localStorage jika ada simpanan lokal
     const localKas = JSON.parse(localStorage.getItem("stepa_local_kas") || "[]");
     const updatedLocal = localKas.filter((_, idx) => idx !== index);
     localStorage.setItem("stepa_local_kas", JSON.stringify(updatedLocal));
 
-    // Perbarui tabel kas dan statistik dashboard
     renderKas();
     renderDashboard();
 
     toast(`Catatan kas "${ket}" berhasil dihapus.`);
 }
 
-window.deleteKas = deleteKas;
-
-function renderAbsensi() {
-    const t = $("absensiTable");
-    if (t) {
-        t.innerHTML = data.absensi?.length ? data.absensi.map(x => `
-            <tr>
-                <td>${esc(x.tanggal)}</td>
-                <td>${esc(x.nama)}</td>
-                <td>${esc(x.status)}</td>
-                <td>${esc(x.keterangan || "-")}</td>
-                <td class="pengurus-only">-</td>
-            </tr>
-        `).join("") : `<tr><td colspan="5">Belum ada catatan absensi.</td></tr>`;
-    }
-}
-
-function populateNames() {
-    const s = $("absensiNama");
-    if (!s) return;
-    s.innerHTML = '<option value="">-- Pilih Anggota --</option>';
-    (data.anggota || []).forEach(x => {
-        const o = document.createElement("option");
-        o.value = x.nama;
-        o.textContent = `${x.nama} (${x.kelas || "-"})`;
-        s.appendChild(o);
-    });
-}
 
 /* =========================================================
    TRANSAKSI KAS & ABSENSI
