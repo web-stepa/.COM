@@ -654,27 +654,79 @@ function loadXLSX() {
 }
 
 function csv(text) {
-    const lines = text.replace(/^\uFEFF/, "").split(/\r?\n/).filter(Boolean);
+    const lines = text.replace(/^\uFEFF/, "").split(/\r?\n/).filter(line => line.trim());
     if (lines.length < 2) return [];
+    
     const delimiter = lines[0].includes(";") ? ";" : ",";
     const headers = lines.shift().split(delimiter).map(x => x.trim().toLowerCase());
 
     return lines.map(line => {
         const arr = line.split(delimiter);
         const obj = {};
-        headers.forEach((k, idx) => obj[k] = arr[idx] || "");
+        headers.forEach((k, idx) => {
+            if (k) obj[k] = (arr[idx] || "").trim();
+        });
         return obj;
     });
 }
 
-function norm(x) {
-    const r = {};
-    Object.keys(x).forEach(k => r[k.trim().toLowerCase().replace(/\s+/g, "")] = x[k]);
+function norm(item) {
+    let namaVal = "";
+    let kelasVal = "";
+    let hpVal = "";
+    let statusVal = "";
+
+    Object.keys(item).forEach(key => {
+        const cleanKey = String(key).toLowerCase().replace(/[^a-z0-9]/g, "");
+        const val = String(item[key] || "").trim();
+
+        if (!val) return;
+
+        if (!namaVal && (
+            cleanKey.includes("nama") || 
+            cleanKey.includes("name") || 
+            cleanKey.includes("siswa") || 
+            cleanKey.includes("anggota") || 
+            cleanKey.includes("peserta")
+        )) {
+            namaVal = val;
+        }
+
+        if (!kelasVal && (
+            cleanKey.includes("kelas") || 
+            cleanKey.includes("class") || 
+            cleanKey.includes("jurusan") || 
+            cleanKey.includes("rombel")
+        )) {
+            kelasVal = val;
+        }
+
+        if (!hpVal && (
+            cleanKey.includes("hp") || 
+            cleanKey.includes("wa") || 
+            cleanKey.includes("telp") || 
+            cleanKey.includes("kontak") || 
+            cleanKey.includes("phone")
+        )) {
+            hpVal = val;
+        }
+
+        if (!statusVal && cleanKey.includes("status")) {
+            statusVal = val;
+        }
+    });
+
+    if (!namaVal) {
+        const values = Object.values(item).map(v => String(v).trim()).filter(Boolean);
+        if (values.length > 0) namaVal = values[0];
+        if (values.length > 1 && !kelasVal) kelasVal = values[1];
+    }
+
     return {
-        nama: String(r.nama || r.name || "").trim(),
-        kelas: String(r.kelas || r.class || "-").trim(),
-        hp: String(r.hp || r.nohp || r.telepon || "-").trim(),
-        status: String(r.status || "Aktif").trim()
+        nama: namaVal,
+        kelas: kelasVal || "-",
+        hp: hpVal || "-",
+        status: statusVal || "Aktif"
     };
 }
 
