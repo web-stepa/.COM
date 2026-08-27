@@ -608,7 +608,34 @@ async function changeMyPassword(event) {
 }
 
 /* =========================================================
-   UPLOAD EXCEL / CSV INTEGRATION (LOCAL ONLY)
+   LOAD DATA (TERMASUK MEMUAT SIMPANAN LOKAL)
+   ========================================================= */
+async function loadData() {
+    if (!currentUser) return;
+    try {
+        const r = await api("allData", auth());
+        
+        // Ambil data dari server
+        const serverAnggota = r.data?.anggota || [];
+        
+        // Ambil data tambahan yang pernah di-upload lokal dari localStorage
+        const localAnggota = JSON.parse(localStorage.getItem("stepa_local_anggota") || "[]");
+
+        data = {
+            // Gabungkan data server dengan data upload lokal
+            anggota: [...serverAnggota, ...localAnggota],
+            kas: r.data?.kas || [],
+            absensi: r.data?.absensi || []
+        };
+        
+        renderAll();
+    } catch (e) {
+        toast("Gagal memuat data: " + e.message);
+    }
+}
+
+/* =========================================================
+   UPLOAD EXCEL / CSV INTEGRATION (SIMPAN KE LOCALSTORAGE)
    ========================================================= */
 function setupUpload() {
     const t = $("anggotaTable");
@@ -758,14 +785,22 @@ async function uploadFile(e) {
             throw new Error("Tidak ada data nama yang bisa dibaca dari file.");
         }
 
-        // Langsung masukkan ke array lokal tanpa panggil API
-        data.anggota = [...(data.anggota || []), ...dataAnggotaBaru];
+        // 1. Ambil data lokal yang sudah ada sebelumnya
+        const existingLocal = JSON.parse(localStorage.getItem("stepa_local_anggota") || "[]");
+        
+        // 2. Gabungkan data lama + data baru hasil upload
+        const updatedLocal = [...existingLocal, ...dataAnggotaBaru];
+        
+        // 3. Simpan permanen ke localStorage browser
+        localStorage.setItem("stepa_local_anggota", JSON.stringify(updatedLocal));
 
+        // 4. Perbarui data di halaman web
+        data.anggota = [...(data.anggota || []), ...dataAnggotaBaru];
         renderAnggota();
         populateNames();
         if ($("statAnggota")) $("statAnggota").textContent = data.anggota.length;
 
-        toast(`${dataAnggotaBaru.length} data anggota berhasil dimasukkan ke tabel web.`);
+        toast(`${dataAnggotaBaru.length} data anggota berhasil disimpan di website.`);
 
     } catch (x) {
         alert("Upload gagal:\n\n" + x.message);
@@ -777,7 +812,6 @@ async function uploadFile(e) {
         }
     }
 }
-
 /* =========================================================
    GLOBAL SCOPE EXPORTS
    ========================================================= */
