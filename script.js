@@ -608,7 +608,7 @@ async function changeMyPassword(event) {
 }
 
 /* =========================================================
-   UPLOAD EXCEL / CSV INTEGRATION
+   UPLOAD EXCEL / CSV INTEGRATION (LOCAL ONLY)
    ========================================================= */
 function setupUpload() {
     const t = $("anggotaTable");
@@ -752,32 +752,20 @@ async function uploadFile(e) {
             rows = X.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" });
         }
 
-        const dataAnggota = rows.map(norm).filter(x => x.nama);
-        if (!dataAnggota.length) throw new Error("Kolom 'nama' tidak ditemukan atau data kosong.");
-
-        let ok = 0, bad = 0;
-        for (let i = 0; i < dataAnggota.length; i++) {
-            if (b) {
-                b.disabled = true;
-                b.textContent = `⏳ Upload ${i + 1}/${dataAnggota.length}...`;
-            }
-            try {
-                await api("addAnggota", {
-                    ...auth(),
-                    nama: dataAnggota[i].nama,
-                    kelas: dataAnggota[i].kelas,
-                    hp: dataAnggota[i].hp,
-                    status: dataAnggota[i].status
-                });
-                ok++;
-            } catch (err) {
-                console.error(err);
-                bad++;
-            }
+        const dataAnggotaBaru = rows.map(norm).filter(x => x.nama);
+        
+        if (!dataAnggotaBaru.length) {
+            throw new Error("Tidak ada data nama yang bisa dibaca dari file.");
         }
 
-        await loadData();
-        toast(`${ok} anggota berhasil masuk ke Google Sheets${bad ? `, ${bad} gagal` : ""}.`);
+        // Langsung masukkan ke array lokal tanpa panggil API
+        data.anggota = [...(data.anggota || []), ...dataAnggotaBaru];
+
+        renderAnggota();
+        populateNames();
+        if ($("statAnggota")) $("statAnggota").textContent = data.anggota.length;
+
+        toast(`${dataAnggotaBaru.length} data anggota berhasil dimasukkan ke tabel web.`);
 
     } catch (x) {
         alert("Upload gagal:\n\n" + x.message);
