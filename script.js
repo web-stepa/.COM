@@ -353,20 +353,57 @@ function deleteAnggota(index) {
 // Pastikan fungsi bisa diakses dari tombol onclick tabel
 window.deleteAnggota = deleteAnggota;
 
+/* =========================================================
+   RENDER KAS & FUNGSI HAPUS KAS
+   ========================================================= */
 function renderKas() {
     const t = $("kasTable");
-    if (t) {
-        t.innerHTML = data.kas?.length ? data.kas.map(x => `
-            <tr>
-                <td>${esc(x.tanggal)}</td>
-                <td>${esc(x.jenis)}</td>
-                <td>${esc(x.keterangan)}</td>
-                <td>${rupiah(x.nominal)}</td>
-                <td class="pengurus-only">-</td>
-            </tr>
-        `).join("") : `<tr><td colspan="5">Belum ada catatan kas.</td></tr>`;
+    if (!t) return;
+
+    if (!data.kas?.length) {
+        t.innerHTML = `<tr><td colspan="5">Belum ada catatan kas.</td></tr>`;
+        return;
     }
+
+    t.innerHTML = data.kas.map((x, i) => `
+        <tr>
+            <td>${esc(x.tanggal)}</td>
+            <td>${esc(x.jenis)}</td>
+            <td>${esc(x.keterangan)}</td>
+            <td>${rupiah(x.nominal)}</td>
+            <td class="pengurus-only">
+                <button class="small-btn danger-btn" type="button" onclick="deleteKas(${i})">🗑️ Hapus</button>
+            </td>
+        </tr>
+    `).join("");
+
+    setupRole();
 }
+
+function deleteKas(index) {
+    if (!pengurus()) return toast("Hanya Pengurus yang dapat menghapus data kas.");
+
+    const item = data.kas[index];
+    const ket = item?.keterangan || "transaksi ini";
+
+    if (!confirm(`Apakah kamu yakin ingin menghapus catatan kas "${ket}"?`)) return;
+
+    // Hapus dari array kas
+    data.kas.splice(index, 1);
+
+    // Hapus dari localStorage jika ada simpanan lokal
+    const localKas = JSON.parse(localStorage.getItem("stepa_local_kas") || "[]");
+    const updatedLocal = localKas.filter((_, idx) => idx !== index);
+    localStorage.setItem("stepa_local_kas", JSON.stringify(updatedLocal));
+
+    // Perbarui tabel kas dan statistik dashboard
+    renderKas();
+    renderDashboard();
+
+    toast(`Catatan kas "${ket}" berhasil dihapus.`);
+}
+
+window.deleteKas = deleteKas;
 
 function renderAbsensi() {
     const t = $("absensiTable");
@@ -857,3 +894,4 @@ window.showPage = showPage;
 window.openModal = openModal;
 window.closeModal = closeModal;
 window.loadData = loadData;
+window.deleteKas = deleteKas;
