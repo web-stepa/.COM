@@ -300,20 +300,58 @@ function renderDashboard() {
     }
 }
 
+/* =========================================================
+   RENDER ANGGOTA & FUNGSI HAPUS
+   ========================================================= */
 function renderAnggota() {
     const t = $("anggotaTable");
-    if (t) {
-        t.innerHTML = data.anggota?.length ? data.anggota.map((x, i) => `
-            <tr>
-                <td>${i + 1}</td>
-                <td>${esc(x.nama)}</td>
-                <td>${esc(x.kelas)}</td>
-                <td>${esc(x.hp)}</td>
-                <td>${esc(x.status)}</td>
-            </tr>
-        `).join("") : `<tr><td colspan="5">Belum ada calon anggota.</td></tr>`;
+    if (!t) return;
+
+    if (!data.anggota?.length) {
+        t.innerHTML = `<tr><td colspan="6">Belum ada calon anggota.</td></tr>`;
+        return;
     }
+
+    t.innerHTML = data.anggota.map((x, i) => `
+        <tr>
+            <td>${i + 1}</td>
+            <td>${esc(x.nama)}</td>
+            <td>${esc(x.kelas)}</td>
+            <td>${esc(x.hp)}</td>
+            <td>${esc(x.status)}</td>
+            <td class="pengurus-only">
+                <button class="small-btn danger-btn" type="button" onclick="deleteAnggota(${i})">🗑️ Hapus</button>
+            </td>
+        </tr>
+    `).join("");
+
+    setupRole();
 }
+
+function deleteAnggota(index) {
+    if (!pengurus()) return toast("Hanya Pengurus yang dapat menghapus data.");
+
+    const targetNama = data.anggota[index]?.nama;
+    if (!confirm(`Apakah kamu yakin ingin menghapus data "${targetNama}"?`)) return;
+
+    // Hapus dari memori lokal web
+    data.anggota.splice(index, 1);
+
+    // Hapus dari localStorage browser
+    const localAnggota = JSON.parse(localStorage.getItem("stepa_local_anggota") || "[]");
+    const updatedLocal = localAnggota.filter(x => x.nama !== targetNama);
+    localStorage.setItem("stepa_local_anggota", JSON.stringify(updatedLocal));
+
+    // Perbarui tabel & dropdown nama
+    renderAnggota();
+    populateNames();
+    if ($("statAnggota")) $("statAnggota").textContent = data.anggota.length;
+
+    toast(`Data "${targetNama}" berhasil dihapus.`);
+}
+
+// Pastikan fungsi bisa diakses dari tombol onclick tabel
+window.deleteAnggota = deleteAnggota;
 
 function renderKas() {
     const t = $("kasTable");
