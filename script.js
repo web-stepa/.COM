@@ -351,27 +351,101 @@ function deleteAnggota(index) {
    RENDER & HAPUS KAS
    ========================================================= */
 function renderKas() {
-    const t = $("kasTable");
-    if (!t) return;
+    const table = document.getElementById("kasTable");
+    if (!table) return;
 
-    if (!data.kas?.length) {
-        t.innerHTML = `<tr><td colspan="5">Belum ada catatan kas.</td></tr>`;
-        return;
+    table.innerHTML = "";
+
+    let totalMasuk = 0;
+    let totalKeluar = 0;
+
+    if (!data.kas || data.kas.length === 0) {
+        table.innerHTML = `
+            <tr>
+                <td colspan="6" class="empty">
+                    Belum ada catatan kas.
+                </td>
+            </tr>
+        `;
+    } else {
+        data.kas.forEach((item, index) => {
+
+            const nominal = Number(item.nominal) || 0;
+            const jenis = String(item.jenis || "").trim().toLowerCase();
+
+            if (
+                jenis === "masuk" ||
+                jenis === "pemasukan"
+            ) {
+                totalMasuk += nominal;
+            } else if (
+                jenis === "keluar" ||
+                jenis === "pengeluaran"
+            ) {
+                totalKeluar += nominal;
+            }
+
+            const tr = document.createElement("tr");
+
+            tr.innerHTML = `
+                <td>${index + 1}</td>
+
+                <td>${item.tanggal || "-"}</td>
+
+                <td>
+                    <span class="badge ${
+                        jenis === "masuk" ||
+                        jenis === "pemasukan"
+                            ? "hadir"
+                            : "alpa"
+                    }">
+                        ${item.jenis || "-"}
+                    </span>
+                </td>
+
+                <td>${item.keterangan || "-"}</td>
+
+                <td>
+                    Rp ${nominal.toLocaleString("id-ID")}
+                </td>
+
+                <td class="pengurus-only">
+                    <button
+                        class="delete-btn"
+                        onclick="deleteKas('${item.id}')"
+                    >
+                        Hapus
+                    </button>
+                </td>
+            `;
+
+            table.appendChild(tr);
+        });
     }
 
-    t.innerHTML = data.kas.map((x, i) => `
-        <tr>
-            <td>${esc(x.tanggal)}</td>
-            <td>${esc(x.jenis)}</td>
-            <td>${esc(x.keterangan)}</td>
-            <td>${rupiah(x.nominal)}</td>
-            <td class="pengurus-only">
-                <button class="small-btn danger-btn" type="button" onclick="deleteKas(${i})">🗑️ Hapus</button>
-            </td>
-        </tr>
-    `).join("");
+    const saldo = totalMasuk - totalKeluar;
 
-    setupRole();
+    // SESUAI DENGAN ID DI index.html
+    const kasMasuk = document.getElementById("kasMasuk");
+    const kasKeluar = document.getElementById("kasKeluar");
+    const kasSaldo = document.getElementById("kasSaldo");
+
+    if (kasMasuk) {
+        kasMasuk.textContent =
+            "Rp " + totalMasuk.toLocaleString("id-ID");
+    }
+
+    if (kasKeluar) {
+        kasKeluar.textContent =
+            "Rp " + totalKeluar.toLocaleString("id-ID");
+    }
+
+    if (kasSaldo) {
+        kasSaldo.textContent =
+            "Rp " + saldo.toLocaleString("id-ID");
+    }
+
+    setupUserRoleUI();
 }
 
 function deleteKas(index) {
