@@ -883,41 +883,187 @@ function renderAnggota() {
     const table = $("anggotaTable");
     if (!table) return;
 
-    const anggota = Array.isArray(data.anggota) ? data.anggota : [];
+    const anggota = Array.isArray(data.anggota)
+        ? data.anggota
+        : [];
 
     if (!anggota.length) {
         table.innerHTML = `
             <tr>
-                <td colspan="5" class="empty">
+                <td colspan="6" class="empty">
                     Belum ada data calon anggota.
                 </td>
             </tr>
         `;
+
+        if ($("statAnggota")) {
+            $("statAnggota").textContent = "0";
+        }
+
         return;
     }
 
     table.innerHTML = "";
 
     anggota.forEach((item, index) => {
+
         const row = document.createElement("tr");
 
         row.innerHTML = `
             <td>${index + 1}</td>
-            <td>${escapeHTML(item.nama || "-")}</td>
-            <td>${escapeHTML(item.kelas || "-")}</td>
-            <td>${escapeHTML(item.hp || item.no_hp || "-")}</td>
+
+            <td>
+                ${escapeHTML(item.nama || "-")}
+            </td>
+
+            <td>
+                ${escapeHTML(item.kelas || "-")}
+            </td>
+
+            <td>
+                ${escapeHTML(
+                    item.hp ||
+                    item.no_hp ||
+                    "-"
+                )}
+            </td>
+
             <td>
                 <span class="badge hadir">
-                    ${escapeHTML(item.status || "Aktif")}
+                    ${escapeHTML(
+                        item.status || "Aktif"
+                    )}
                 </span>
             </td>
+
+            <td class="pengurus-only">
+                <button
+                    type="button"
+                    class="small-btn danger-btn"
+                    data-anggota-index="${index}"
+                >
+                    🗑️ Hapus
+                </button>
+            </td>
         `;
+
+        const deleteButton =
+            row.querySelector(
+                "[data-anggota-index]"
+            );
+
+        deleteButton?.addEventListener(
+            "click",
+            () => deleteAnggota(index)
+        );
 
         table.appendChild(row);
     });
 
     if ($("statAnggota")) {
-        $("statAnggota").textContent = anggota.length;
+        $("statAnggota").textContent =
+            anggota.length;
+    }
+
+    setupUserRoleUI();
+}
+async function deleteAnggota(index) {
+
+    if (!isPengurus()) {
+        toast(
+            "Hanya Pengurus yang dapat menghapus calon anggota."
+        );
+        return;
+    }
+
+    const anggota = data.anggota[index];
+
+    if (!anggota) {
+        toast("Data calon anggota tidak ditemukan.");
+        return;
+    }
+
+    const nama =
+        anggota.nama ||
+        "calon anggota ini";
+
+    if (
+        !confirm(
+            `Yakin ingin menghapus "${nama}"?`
+        )
+    ) {
+        return;
+    }
+
+    try {
+
+        /*
+         * Calon anggota hasil upload Excel/CSV
+         * disimpan di localStorage.
+         */
+        const localData =
+            JSON.parse(
+                localStorage.getItem(
+                    "stepa_local_anggota"
+                ) || "[]"
+            );
+
+        if (Array.isArray(localData)) {
+
+            /*
+             * Cari data yang sesuai.
+             */
+            const posisi =
+                localData.findIndex(item =>
+                    String(item.nama || "")
+                        .trim()
+                        .toLowerCase() ===
+                    String(anggota.nama || "")
+                        .trim()
+                        .toLowerCase() &&
+                    String(item.kelas || "")
+                        .trim()
+                        .toLowerCase() ===
+                    String(anggota.kelas || "")
+                        .trim()
+                        .toLowerCase()
+                );
+
+            if (posisi !== -1) {
+
+                localData.splice(posisi, 1);
+
+                localStorage.setItem(
+                    "stepa_local_anggota",
+                    JSON.stringify(localData)
+                );
+            }
+        }
+
+        /*
+         * Hapus juga dari data yang sedang ditampilkan.
+         */
+        data.anggota.splice(index, 1);
+
+        renderAnggota();
+        populateAbsensiNames();
+        renderDashboard();
+
+        toast(
+            `"${nama}" berhasil dihapus.`
+        );
+
+    } catch (error) {
+
+        console.error(
+            "DELETE ANGGOTA ERROR:",
+            error
+        );
+
+        toast(
+            "Gagal menghapus calon anggota: " +
+            error.message
+        );
     }
 }
 
@@ -2402,6 +2548,7 @@ window.openModal = openModal;
 window.closeModal = closeModal;
 window.loadAllData = loadAllData;
 window.deleteKas = deleteKas;
+window.deleteAnggota = deleteAnggota;
 window.deleteAbsensi = deleteAbsensi;
 window.loadUsers = loadUsers;
 window.openUserModal = openUserModal;
