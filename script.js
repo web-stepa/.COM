@@ -1,250 +1,740 @@
 /* =========================================================
-   KONFIGURASI DAN STATE APLIKASI
+   STEPA MANAGEMENT - SCRIPT.JS FINAL
+   Cocok dengan index.html STEPA + Code.gs yang diberikan
    ========================================================= */
+
 const API_URL = "https://script.google.com/macros/s/AKfycbxYeIYi85RfKBRPuey7v7Z7c9aJ3Iw6MSx9iAmsDuOYsHOEad6jJY2cvvu3aQYvB5q_Dw/exec";
 
 let currentUser = null;
-let data = { anggota: [], kas: [], absensi: [] };
+
+let data = {
+    anggota: [],
+    kas: [],
+    absensi: []
+};
+
 let xlsxPromise = null;
 
-/* =========================================================
-   HELPER UTAMA & UTILITY
-   ========================================================= */
-const $ = id => document.getElementById(id);
-const esc = v => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-const rupiah = v => "Rp" + (Number(v) || 0).toLocaleString("id-ID");
-const pengurus = () => String(currentUser?.role || "").toLowerCase() === "pengurus";
 
-function auth() {
+/* =========================================================
+   UTILITAS
+   ========================================================= */
+
+function $(id) {
+    return document.getElementById(id);
+}
+
+function escapeHTML(value) {
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+function formatRupiah(value) {
+    const n = Number(value) || 0;
+    return "Rp" + n.toLocaleString("id-ID");
+}
+
+function isPengurus() {
+    return String(currentUser?.role || "").trim().toLowerCase() === "pengurus";
+}
+
+function authParams() {
     return {
         username: currentUser?.username || "",
         password: currentUser?.password || ""
     };
 }
 
-function toast(msg) {
-    const t = $("toast");
-    if (t) {
-        t.textContent = msg;
-        t.classList.add("show");
-        clearTimeout(window.__toast);
-        window.__toast = setTimeout(() => t.classList.remove("show"), 3000);
-    } else {
-        alert(msg);
+function toast(message) {
+    const el = $("toast");
+
+    if (!el) {
+        alert(message);
+        return;
     }
+
+    el.textContent = message;
+    el.classList.add("show");
+
+    clearTimeout(window.stepaToastTimer);
+
+    window.stepaToastTimer = setTimeout(() => {
+        el.classList.remove("show");
+    }, 3000);
 }
 
-function openModal(id) { $(id)?.classList.add("show"); }
-function closeModal(id) { $(id)?.classList.remove("show"); }
+function openModal(id) {
+    $(id)?.classList.add("show");
+}
+
+function closeModal(id) {
+    $(id)?.classList.remove("show");
+}
+
 
 /* =========================================================
-   KOMUNIKASI API (JSONP INTERFACE)
+   API JSONP
    ========================================================= */
-function api(action, params = {}) {
+
+function callAPI(action, params = {}) {
     return new Promise((resolve, reject) => {
-        const cb = "stepa_" + Date.now() + "_" + Math.random().toString(36).slice(2);
-        const s = document.createElement("script");
-        const q = new URLSearchParams({ action, callback: cb, ...params });
-        
-        s.src = API_URL + "?" + q.toString();
-        let done = false;
 
-        const clean = () => {
-            clearTimeout(timer);
-            delete window[cb];
-            s.remove();
-        };
+        const callbackName =
+            "stepa_cb_" +
+            Date.now() +
+            "_" +
+            Math.floor(Math.random() * 100000);
 
-        const timer = setTimeout(() => {
-            if (!done) {
-                done = true;
-                clean();
-                reject(new Error("Koneksi ke server timeout."));
-            }
+        const query = new URLSearchParams({
+            action,
+            callback: callbackName,
+            ...params
+        });
+
+        const script = document.createElement("script");
+
+        script.src = API_URL + "?" + query.toString();
+
+        let finished = false;
+
+        const timeout = setTimeout(() => {
+            if (finished) return;
+
+            finished = true;
+            cleanup();
+
+            reject(
+                new Error(
+                    "Waktu koneksi habis. Periksa deployment Google Apps Script."
+                )
+            );
         }, 20000);
 
-        window[cb] = r => {
-            if (done) return;
-            done = true;
-            clean();
-            r?.success ? resolve(r) : reject(new Error(r?.message || "Permintaan gagal."));
-        };
+        function cleanup() {
+            clearTimeout(timeout);
+            delete window[callbackName];
 
-        s.onerror = () => {
-            if (!done) {
-                done = true;
-                clean();
-                reject(new Error("Gagal terhubung ke Google Apps Script."));
+            if (script.parentNode) {
+                script.parentNode.removeChild(script);
+            }
+        }
+
+        window[callbackName] = (response) => {
+            if (finished) return;
+
+            finished = true;
+            cleanup();
+
+            if (response?.success) {
+                resolve(response);
+            } else {
+                reject(
+                    new Error(
+                        response?.message ||
+                        "Permintaan gagal."
+                    )
+                );
             }
         };
 
-        document.body.appendChild(s);
+        script.onerror = () => {
+            if (finished) return;
+
+            finished = true;
+            cleanup();
+
+            reject(
+                new Error(
+                    "Gagal terhubung ke Google Apps Script."
+                )
+            );
+        };
+
+        document.body.appendChild(script);
     });
 }
 
+
 /* =========================================================
-   INISIALISASI & EVENT LISTENERS
+   START
    ========================================================= */
+
 document.addEventListener("DOMContentLoaded", () => {
-    setupEvents();
+    setupEventListeners();
     checkSession();
 });
 
-function setupEvents() {
-    // Form Login & Auth Event
-    $("loginForm")?.addEventListener("submit", login);
-    $("logoutBtn")?.addEventListener("click", logout);
-    $("showPassword")?.addEventListener("click", () => {
-        const p = $("password");
-        if (p) p.type = p.type === "password" ? "text" : "password";
-    });
-
-    // Action Topbar Buttons
-    $("refreshBtn")?.addEventListener("click", loadData);
-    $("syncBtn")?.addEventListener("click", loadData);
-    $("refreshUsersBtn")?.addEventListener("click", loadUsers);
-
-    // Navigasi Halaman
-    document.querySelectorAll(".nav-item").forEach(x => {
-        x.addEventListener("click", () => showPage(x.dataset.page));
-    });
-    document.querySelectorAll("[data-page-btn]").forEach(x => {
-        x.addEventListener("click", () => showPage(x.dataset.pageBtn));
-    });
-
-    // Form Submissions
-    $("addKasBtn")?.addEventListener("click", () => openModal("kasModal"));
-    $("kasForm")?.addEventListener("submit", addKas);
-
-    $("addAbsensiBtn")?.addEventListener("click", () => openModal("absensiModal"));
-    $("absensiForm")?.addEventListener("submit", addAbsensi);
-
-    $("addUserBtn")?.addEventListener("click", () => openUserModal());
-    $("userForm")?.addEventListener("submit", saveUser);
-
-    $("myPasswordForm")?.addEventListener("submit", changeMyPassword);
-
-    // Modal Closers
-    document.querySelectorAll(".close-modal").forEach(x => {
-        x.addEventListener("click", () => closeModal(x.dataset.close));
-    });
-}
 
 /* =========================================================
-   AUTHENTICATION & SESSION MANAGEMENT
+   SESSION / LOGIN
    ========================================================= */
+
 function checkSession() {
+    const saved = localStorage.getItem("stepa_user");
+
+    if (!saved) {
+        showLoginPage();
+        return;
+    }
+
     try {
-        const x = JSON.parse(localStorage.getItem("stepa_user") || "null");
-        if (!x?.username) throw 0;
-        currentUser = x;
-        showApp();
-    } catch {
-        showLogin();
+        const user = JSON.parse(saved);
+
+        /*
+         * Password diperlukan oleh Code.gs untuk operasi
+         * Pengurus. Session lama yang tidak punya password
+         * harus login ulang.
+         */
+        if (
+            !user ||
+            !user.username ||
+            !user.password
+        ) {
+            localStorage.removeItem("stepa_user");
+            currentUser = null;
+            showLoginPage();
+
+            if ($("loginMessage")) {
+                $("loginMessage").textContent =
+                    "Silakan login kembali.";
+            }
+
+            return;
+        }
+
+        currentUser = user;
+
+        showMainApp();
+
+    } catch (error) {
+        localStorage.removeItem("stepa_user");
+        currentUser = null;
+        showLoginPage();
     }
 }
 
-function showLogin() {
-    if ($("loginPage")) $("loginPage").style.display = "flex";
-    if ($("appPage")) {
-        $("appPage").classList.add("hidden");
-        $("appPage").style.display = "none";
+async function handleLogin(event) {
+    event.preventDefault();
+
+    const username =
+        $("username")?.value.trim();
+
+    const password =
+        $("password")?.value || "";
+
+    const message =
+        $("loginMessage");
+
+    if (!username || !password) {
+        if (message) {
+            message.textContent =
+                "Username dan password wajib diisi.";
+        }
+
+        return;
+    }
+
+    if (message) {
+        message.textContent = "Sedang masuk...";
+    }
+
+    try {
+        const response = await callAPI(
+            "login",
+            {
+                username,
+                password
+            }
+        );
+
+        if (
+            !response?.success ||
+            !response.data
+        ) {
+            throw new Error(
+                response?.message ||
+                "Login gagal."
+            );
+        }
+
+        /*
+         * PENTING:
+         * Password disimpan di session agar request
+         * addKas/deleteKas/allData/listUsers dapat
+         * melewati autentikasi Code.gs.
+         */
+        currentUser = {
+            ...response.data,
+            password
+        };
+
+        localStorage.setItem(
+            "stepa_user",
+            JSON.stringify(currentUser)
+        );
+
+        if (message) {
+            message.textContent = "";
+        }
+
+        showMainApp();
+
+        toast(
+            "Login berhasil! Selamat datang " +
+            (
+                currentUser.nama ||
+                currentUser.username
+            )
+        );
+
+    } catch (error) {
+
+        if (message) {
+            message.textContent =
+                "Login gagal: " +
+                error.message;
+        } else {
+            toast(error.message);
+        }
+
+        console.error(
+            "STEPA LOGIN ERROR:",
+            error
+        );
     }
 }
 
-function showApp() {
-    if ($("loginPage")) $("loginPage").style.display = "none";
-    if ($("appPage")) {
-        $("appPage").classList.remove("hidden");
-        $("appPage").style.display = "flex";
+function handleLogout() {
+    currentUser = null;
+
+    localStorage.removeItem("stepa_user");
+
+    data = {
+        anggota: [],
+        kas: [],
+        absensi: []
+    };
+
+    $("loginForm")?.reset();
+
+    if ($("loginMessage")) {
+        $("loginMessage").textContent = "";
     }
+
+    showLoginPage();
+}
+
+function showLoginPage() {
+    const loginPage = $("loginPage");
+    const appPage = $("appPage");
+
+    if (loginPage) {
+        loginPage.style.display = "flex";
+    }
+
+    if (appPage) {
+        appPage.classList.add("hidden");
+        appPage.style.display = "none";
+    }
+}
+
+function showMainApp() {
+    const loginPage = $("loginPage");
+    const appPage = $("appPage");
+
+    if (loginPage) {
+        loginPage.style.display = "none";
+    }
+
+    if (appPage) {
+        appPage.classList.remove("hidden");
+        appPage.style.display = "flex";
+    }
+
     updateUserInfo();
-    setupRole();
+    setupUserRoleUI();
+
     showPage("dashboard");
-    loadData();
+
+    loadAllData();
 }
 
 function updateUserInfo() {
-    if ($("userName")) $("userName").textContent = currentUser.nama || currentUser.username;
-    if ($("userRole")) $("userRole").textContent = currentUser.role || "Anggota";
-    if ($("userAvatar")) $("userAvatar").textContent = (currentUser.nama || currentUser.username || "U")[0].toUpperCase();
-}
+    if (!currentUser) return;
 
-function setupRole() {
-    document.querySelectorAll(".pengurus-only").forEach(x => {
-        x.style.display = pengurus() ? "" : "none";
-    });
-}
+    const nama =
+        currentUser.nama ||
+        currentUser.username ||
+        "Pengguna";
 
-async function login(e) {
-    e.preventDefault();
-    const u = $("username")?.value.trim();
-    const p = $("password")?.value || "";
+    const role =
+        currentUser.role ||
+        "Anggota";
 
-    if (!u || !p) return toast("Username dan password wajib diisi.");
+    if ($("userName")) {
+        $("userName").textContent = nama;
+    }
 
-    try {
-        const r = await api("login", { username: u, password: p });
-        currentUser = { ...r.data, password: p };
-        localStorage.setItem("stepa_user", JSON.stringify(currentUser));
-        showApp();
-        toast("Login berhasil.");
-    } catch (err) {
-        if ($("loginMessage")) $("loginMessage").textContent = err.message;
-        else toast(err.message);
+    if ($("userRole")) {
+        $("userRole").textContent = role;
+    }
+
+    if ($("userAvatar")) {
+        $("userAvatar").textContent =
+            nama.charAt(0).toUpperCase();
     }
 }
 
-function logout() {
-    currentUser = null;
-    localStorage.removeItem("stepa_user");
-    showLogin();
+function setupUserRoleUI() {
+    const visible = isPengurus();
+
+    document
+        .querySelectorAll(".pengurus-only")
+        .forEach(element => {
+            element.style.display =
+                visible ? "" : "none";
+        });
 }
 
+
 /* =========================================================
-   NAVIGASI HALAMAN
+   EVENT LISTENERS
    ========================================================= */
-function showPage(n) {
-    const pages = ["dashboard", "kas", "absensi", "anggota", "akun"];
-    if (!pages.includes(n)) n = "dashboard";
 
-    document.querySelectorAll(".page").forEach(x => x.classList.remove("active-page"));
-    $(n + "Page")?.classList.add("active-page");
+function setupEventListeners() {
 
-    document.querySelectorAll(".nav-item").forEach(x => {
-        x.classList.toggle("active", x.dataset.page === n);
-    });
+    $("loginForm")?.addEventListener(
+        "submit",
+        handleLogin
+    );
 
-    const titleMap = {
-        dashboard: ["Dashboard", "Ringkasan kegiatan STEPA"],
-        kas: ["Kas STEPA", "Kelola pemasukan dan pengeluaran kas"],
-        absensi: ["Absensi", "Catat kehadiran calon anggota STEPA"],
-        anggota: ["Calon Anggota", "Data calon anggota STEPA"],
-        akun: ["Manajemen Akun", "Kelola username, password, nama, role, dan status akun STEPA"]
+    $("logoutBtn")?.addEventListener(
+        "click",
+        handleLogout
+    );
+
+    $("showPassword")?.addEventListener(
+        "click",
+        () => {
+            const input = $("password");
+            if (!input) return;
+
+            input.type =
+                input.type === "password"
+                    ? "text"
+                    : "password";
+        }
+    );
+
+    document
+        .querySelectorAll(".nav-item")
+        .forEach(button => {
+            button.addEventListener(
+                "click",
+                () => showPage(button.dataset.page)
+            );
+        });
+
+    document
+        .querySelectorAll("[data-page-btn]")
+        .forEach(button => {
+            button.addEventListener(
+                "click",
+                () => showPage(button.dataset.pageBtn)
+            );
+        });
+
+    $("refreshBtn")?.addEventListener(
+        "click",
+        async () => {
+            await loadAllData();
+            toast("Data berhasil diperbarui.");
+        }
+    );
+
+    $("syncBtn")?.addEventListener(
+        "click",
+        syncData
+    );
+
+    $("addKasBtn")?.addEventListener(
+        "click",
+        () => {
+            if (!isPengurus()) {
+                toast(
+                    "Hanya Pengurus yang dapat menginput kas."
+                );
+                return;
+            }
+
+            openModal("kasModal");
+        }
+    );
+
+    $("kasForm")?.addEventListener(
+        "submit",
+        handleAddKas
+    );
+
+    $("addAbsensiBtn")?.addEventListener(
+        "click",
+        () => {
+            if (!isPengurus()) {
+                toast(
+                    "Hanya Pengurus yang dapat menginput absensi."
+                );
+                return;
+            }
+
+            setDefaultAbsensiDate();
+            populateAbsensiNames();
+            openModal("absensiModal");
+        }
+    );
+
+    $("absensiForm")?.addEventListener(
+        "submit",
+        handleAddAbsensi
+    );
+
+    $("addUserBtn")?.addEventListener(
+        "click",
+        () => openUserModal()
+    );
+
+    $("refreshUsersBtn")?.addEventListener(
+        "click",
+        loadUsers
+    );
+
+    $("userForm")?.addEventListener(
+        "submit",
+        saveUser
+    );
+
+    $("myPasswordForm")?.addEventListener(
+        "submit",
+        changeMyPassword
+    );
+
+    document
+        .querySelectorAll(".close-modal")
+        .forEach(button => {
+            button.addEventListener(
+                "click",
+                () => closeModal(
+                    button.dataset.close
+                )
+            );
+        });
+
+    document
+        .querySelectorAll(".modal")
+        .forEach(modal => {
+            modal.addEventListener(
+                "click",
+                event => {
+                    if (event.target === modal) {
+                        modal.classList.remove("show");
+                    }
+                }
+            );
+        });
+}
+
+
+/* =========================================================
+   NAVIGASI
+   ========================================================= */
+
+function showPage(pageName) {
+
+    const pages = [
+        "dashboard",
+        "kas",
+        "absensi",
+        "anggota",
+        "akun"
+    ];
+
+    if (!pages.includes(pageName)) {
+        pageName = "dashboard";
+    }
+
+    /*
+     * Manajemen akun hanya untuk Pengurus.
+     */
+    if (
+        pageName === "akun" &&
+        !isPengurus()
+    ) {
+        toast(
+            "Manajemen Akun hanya dapat diakses Pengurus."
+        );
+
+        pageName = "dashboard";
+    }
+
+    document
+        .querySelectorAll(".page")
+        .forEach(page => {
+            page.classList.remove("active-page");
+        });
+
+    $(pageName + "Page")
+        ?.classList.add("active-page");
+
+    document
+        .querySelectorAll(".nav-item")
+        .forEach(item => {
+            item.classList.toggle(
+                "active",
+                item.dataset.page === pageName
+            );
+        });
+
+    const titles = {
+        dashboard: [
+            "Dashboard",
+            "Ringkasan kegiatan STEPA"
+        ],
+
+        kas: [
+            "Kas STEPA",
+            "Kelola pemasukan dan pengeluaran kas"
+        ],
+
+        absensi: [
+            "Absensi",
+            "Catat kehadiran calon anggota STEPA"
+        ],
+
+        anggota: [
+            "Calon Anggota",
+            "Data calon anggota STEPA"
+        ],
+
+        akun: [
+            "Manajemen Akun",
+            "Kelola username, password, nama, role, dan status akun STEPA"
+        ]
     };
 
-    if ($("pageTitle")) $("pageTitle").textContent = titleMap[n][0];
-    if ($("pageSubtitle")) $("pageSubtitle").textContent = titleMap[n][1];
+    if ($("pageTitle")) {
+        $("pageTitle").textContent =
+            titles[pageName][0];
+    }
 
-    if (n === "anggota") setTimeout(setupUpload, 0);
-    if (n === "akun") loadUsers();
+    if ($("pageSubtitle")) {
+        $("pageSubtitle").textContent =
+            titles[pageName][1];
+    }
+
+    if (pageName === "dashboard") {
+        renderDashboard();
+    }
+
+    if (pageName === "kas") {
+        renderKas();
+    }
+
+    if (pageName === "absensi") {
+        renderAbsensi();
+        populateAbsensiNames();
+    }
+
+    if (pageName === "anggota") {
+        renderAnggota();
+        setupUpload();
+    }
+
+    if (pageName === "akun") {
+        loadUsers();
+    }
 }
 
+
 /* =========================================================
-   DATA RENDER & LOADERS
+   LOAD DATA
    ========================================================= */
-async function loadData() {
+
+async function loadAllData() {
+
     if (!currentUser) return;
+
+    if (!currentUser.password) {
+        toast(
+            "Session lama terdeteksi. Silakan login kembali."
+        );
+
+        handleLogout();
+        return;
+    }
+
     try {
-        const r = await api("allData", auth());
+
+        const response =
+            await callAPI(
+                "allData",
+                authParams()
+            );
+
+        const serverData =
+            response.data || {};
+
         data = {
-            anggota: r.data?.anggota || [],
-            kas: r.data?.kas || [],
-            absensi: r.data?.absensi || []
+            anggota:
+                Array.isArray(serverData.anggota)
+                    ? serverData.anggota
+                    : [],
+
+            kas:
+                Array.isArray(serverData.kas)
+                    ? serverData.kas
+                    : [],
+
+            absensi:
+                Array.isArray(serverData.absensi)
+                    ? serverData.absensi
+                    : []
         };
+
+        /*
+         * Upload Excel/CSV versi frontend lama disimpan
+         * di localStorage. Tetap dipertahankan supaya
+         * data upload yang sudah ada tidak hilang.
+         */
+        const localAnggota =
+            JSON.parse(
+                localStorage.getItem(
+                    "stepa_local_anggota"
+                ) || "[]"
+            );
+
+        if (Array.isArray(localAnggota)) {
+            data.anggota = [
+                ...data.anggota,
+                ...localAnggota
+            ];
+        }
+
         renderAll();
-    } catch (e) {
-        toast("Gagal memuat data: " + e.message);
+
+    } catch (error) {
+
+        console.error(
+            "LOAD DATA ERROR:",
+            error
+        );
+
+        toast(
+            "Gagal memuat data: " +
+            error.message
+        );
     }
 }
 
@@ -253,682 +743,1604 @@ function renderAll() {
     renderAnggota();
     renderKas();
     renderAbsensi();
-    populateNames();
-    setupRole();
+    populateAbsensiNames();
+    setupUserRoleUI();
     setupUpload();
 }
 
-function renderDashboard() {
-    let masuk = 0, keluar = 0;
-    (data.kas || []).forEach(x => {
-        const n = Number(x.nominal) || 0;
-        const j = String(x.jenis || "").toLowerCase();
-        if (j.includes("masuk")) masuk += n;
-        if (j.includes("keluar")) keluar += n;
+
+/* =========================================================
+   DASHBOARD
+   ========================================================= */
+
+function getKasTotals() {
+
+    let masuk = 0;
+    let keluar = 0;
+
+    (data.kas || []).forEach(item => {
+
+        const nominal =
+            Number(item.nominal) || 0;
+
+        const jenis =
+            String(item.jenis || "")
+                .trim()
+                .toLowerCase();
+
+        if (
+            jenis === "pemasukan" ||
+            jenis === "masuk"
+        ) {
+            masuk += nominal;
+        }
+
+        if (
+            jenis === "pengeluaran" ||
+            jenis === "keluar"
+        ) {
+            keluar += nominal;
+        }
     });
 
-    const saldo = masuk - keluar;
+    return {
+        masuk,
+        keluar,
+        saldo: masuk - keluar
+    };
+}
 
-    if ($("statAnggota")) $("statAnggota").textContent = data.anggota?.length || 0;
-    if ($("statMasuk")) $("statMasuk").textContent = rupiah(masuk);
-    if ($("statKeluar")) $("statKeluar").textContent = rupiah(keluar);
-    if ($("statSaldo")) $("statSaldo").textContent = rupiah(saldo);
+function renderDashboard() {
 
-    // Sync juga ke summary kas page
-    if ($("kasMasuk")) $("kasMasuk").textContent = rupiah(masuk);
-    if ($("kasKeluar")) $("kasKeluar").textContent = rupiah(keluar);
-    if ($("kasSaldo")) $("kasSaldo").textContent = rupiah(saldo);
+    const totals = getKasTotals();
+
+    if ($("statAnggota")) {
+        $("statAnggota").textContent =
+            data.anggota.length;
+    }
+
+    if ($("statMasuk")) {
+        $("statMasuk").textContent =
+            formatRupiah(totals.masuk);
+    }
+
+    if ($("statKeluar")) {
+        $("statKeluar").textContent =
+            formatRupiah(totals.keluar);
+    }
+
+    if ($("statSaldo")) {
+        $("statSaldo").textContent =
+            formatRupiah(totals.saldo);
+    }
+
+    if ($("kasMasuk")) {
+        $("kasMasuk").textContent =
+            formatRupiah(totals.masuk);
+    }
+
+    if ($("kasKeluar")) {
+        $("kasKeluar").textContent =
+            formatRupiah(totals.keluar);
+    }
+
+    if ($("kasSaldo")) {
+        $("kasSaldo").textContent =
+            formatRupiah(totals.saldo);
+    }
 
     if ($("dashboardAbsensi")) {
-        $("dashboardAbsensi").innerHTML = (data.absensi || []).slice(-5).reverse().map(x => `
-            <tr>
-                <td>${esc(x.tanggal)}</td>
-                <td>${esc(x.nama)}</td>
-                <td>${esc(x.status)}</td>
-            </tr>
-        `).join("") || `<tr><td colspan="3">Belum ada data absensi.</td></tr>`;
+
+        const rows =
+            (data.absensi || [])
+                .slice(-5)
+                .reverse();
+
+        $("dashboardAbsensi").innerHTML =
+            rows.map(item => `
+                <tr>
+                    <td>${escapeHTML(item.tanggal || "-")}</td>
+                    <td>${escapeHTML(item.nama || "-")}</td>
+                    <td>${escapeHTML(item.status || "-")}</td>
+                </tr>
+            `).join("") ||
+            `<tr>
+                <td colspan="3">
+                    Belum ada data absensi.
+                </td>
+            </tr>`;
     }
 
     if ($("dashboardKas")) {
-        $("dashboardKas").innerHTML = (data.kas || []).slice(-5).reverse().map(x => `
-            <tr>
-                <td>${esc(x.tanggal)}</td>
-                <td>${esc(x.keterangan)}</td>
-                <td>${rupiah(x.nominal)}</td>
-            </tr>
-        `).join("") || `<tr><td colspan="3">Belum ada transaksi kas.</td></tr>`;
+
+        const rows =
+            (data.kas || [])
+                .slice(-5)
+                .reverse();
+
+        $("dashboardKas").innerHTML =
+            rows.map(item => `
+                <tr>
+                    <td>${escapeHTML(item.tanggal || "-")}</td>
+                    <td>${escapeHTML(item.keterangan || "-")}</td>
+                    <td>${formatRupiah(item.nominal)}</td>
+                </tr>
+            `).join("") ||
+            `<tr>
+                <td colspan="3">
+                    Belum ada transaksi kas.
+                </td>
+            </tr>`;
     }
 }
 
-/* =========================================================
-   RENDER & HAPUS ANGGOTA
-   ========================================================= */
-function renderAnggota() {
-    const t = $("anggotaTable");
-    if (!t) return;
 
-    if (!data.anggota?.length) {
-        t.innerHTML = `<tr><td colspan="6">Belum ada calon anggota.</td></tr>`;
-        return;
+/* =========================================================
+   KAS
+   ========================================================= */
+
+function normalizeKasJenis(jenis) {
+
+    const value =
+        String(jenis || "")
+            .trim()
+            .toLowerCase();
+
+    if (
+        value === "pemasukan" ||
+        value === "masuk"
+    ) {
+        return "Pemasukan";
     }
 
-    t.innerHTML = data.anggota.map((x, i) => `
-        <tr>
-            <td>${i + 1}</td>
-            <td>${esc(x.nama)}</td>
-            <td>${esc(x.kelas)}</td>
-            <td>${esc(x.hp)}</td>
-            <td>${esc(x.status)}</td>
-            <td class="pengurus-only">
-                <button class="small-btn danger-btn" type="button" onclick="deleteAnggota(${i})">🗑️ Hapus</button>
-            </td>
-        </tr>
-    `).join("");
+    if (
+        value === "pengeluaran" ||
+        value === "keluar"
+    ) {
+        return "Pengeluaran";
+    }
 
-    setupRole();
+    return jenis || "-";
 }
 
-function deleteAnggota(index) {
-    if (!pengurus()) return toast("Hanya Pengurus yang dapat menghapus data.");
-
-    const targetNama = data.anggota[index]?.nama;
-    if (!confirm(`Apakah kamu yakin ingin menghapus data "${targetNama}"?`)) return;
-
-    data.anggota.splice(index, 1);
-
-    const localAnggota = JSON.parse(localStorage.getItem("stepa_local_anggota") || "[]");
-    const updatedLocal = localAnggota.filter(x => x.nama !== targetNama);
-    localStorage.setItem("stepa_local_anggota", JSON.stringify(updatedLocal));
-
-    renderAnggota();
-    populateNames();
-    if ($("statAnggota")) $("statAnggota").textContent = data.anggota.length;
-
-    toast(`Data "${targetNama}" berhasil dihapus.`);
-}
-
-/* =========================================================
-   RENDER & HAPUS KAS
-   ========================================================= */
 function renderKas() {
-    const table = document.getElementById("kasTable");
+
+    const table = $("kasTable");
+
     if (!table) return;
 
     table.innerHTML = "";
 
-    let totalMasuk = 0;
-    let totalKeluar = 0;
+    const totals = getKasTotals();
 
-    if (!data.kas || data.kas.length === 0) {
+    if (!data.kas.length) {
+
         table.innerHTML = `
             <tr>
-                <td colspan="6" class="empty">
+                <td colspan="5" class="empty">
                     Belum ada catatan kas.
                 </td>
             </tr>
         `;
+
     } else {
+
         data.kas.forEach((item, index) => {
 
-            const nominal = Number(item.nominal) || 0;
-            const jenis = String(item.jenis || "").trim().toLowerCase();
+            const jenis =
+                normalizeKasJenis(item.jenis);
 
-            if (
-                jenis === "masuk" ||
-                jenis === "pemasukan"
-            ) {
-                totalMasuk += nominal;
-            } else if (
-                jenis === "keluar" ||
-                jenis === "pengeluaran"
-            ) {
-                totalKeluar += nominal;
-            }
+            const nominal =
+                Number(item.nominal) || 0;
 
-            const tr = document.createElement("tr");
+            const isMasuk =
+                jenis === "Pemasukan";
 
-            tr.innerHTML = `
-                <td>${index + 1}</td>
+            const row =
+                document.createElement("tr");
 
-                <td>${item.tanggal || "-"}</td>
+            row.innerHTML = `
+                <td>
+                    ${escapeHTML(item.tanggal || "-")}
+                </td>
 
                 <td>
                     <span class="badge ${
-                        jenis === "masuk" ||
-                        jenis === "pemasukan"
+                        isMasuk
                             ? "hadir"
                             : "alpa"
                     }">
-                        ${item.jenis || "-"}
+                        ${escapeHTML(jenis)}
                     </span>
                 </td>
 
-                <td>${item.keterangan || "-"}</td>
+                <td>
+                    ${escapeHTML(
+                        item.keterangan || "-"
+                    )}
+                </td>
 
                 <td>
-                    Rp ${nominal.toLocaleString("id-ID")}
+                    ${formatRupiah(nominal)}
                 </td>
 
                 <td class="pengurus-only">
                     <button
-                        class="delete-btn"
-                        onclick="deleteKas('${item.id}')"
+                        type="button"
+                        class="small-btn danger-btn"
+                        data-kas-index="${index}"
                     >
-                        Hapus
+                        🗑️ Hapus
                     </button>
                 </td>
             `;
 
-            table.appendChild(tr);
+            row
+                .querySelector("[data-kas-index]")
+                ?.addEventListener(
+                    "click",
+                    () => deleteKas(index)
+                );
+
+            table.appendChild(row);
         });
     }
 
-    const saldo = totalMasuk - totalKeluar;
-
-    // SESUAI DENGAN ID DI index.html
-    const kasMasuk = document.getElementById("kasMasuk");
-    const kasKeluar = document.getElementById("kasKeluar");
-    const kasSaldo = document.getElementById("kasSaldo");
-
-    if (kasMasuk) {
-        kasMasuk.textContent =
-            "Rp " + totalMasuk.toLocaleString("id-ID");
+    /*
+     * Ini sengaja memakai ID yang benar dari index.html:
+     * kasMasuk, kasKeluar, kasSaldo.
+     */
+    if ($("kasMasuk")) {
+        $("kasMasuk").textContent =
+            formatRupiah(totals.masuk);
     }
 
-    if (kasKeluar) {
-        kasKeluar.textContent =
-            "Rp " + totalKeluar.toLocaleString("id-ID");
+    if ($("kasKeluar")) {
+        $("kasKeluar").textContent =
+            formatRupiah(totals.keluar);
     }
 
-    if (kasSaldo) {
-        kasSaldo.textContent =
-            "Rp " + saldo.toLocaleString("id-ID");
+    if ($("kasSaldo")) {
+        $("kasSaldo").textContent =
+            formatRupiah(totals.saldo);
     }
 
     setupUserRoleUI();
 }
 
-function deleteKas(index) {
-    if (!pengurus()) return toast("Hanya Pengurus yang dapat menghapus data kas.");
+async function handleAddKas(event) {
 
-    const item = data.kas[index];
-    const ket = item?.keterangan || "transaksi ini";
+    event.preventDefault();
 
-    if (!confirm(`Apakah kamu yakin ingin menghapus catatan kas "${ket}"?`)) return;
+    if (!isPengurus()) {
+        toast(
+            "Hanya Pengurus yang dapat menambah kas."
+        );
+        return;
+    }
 
-    data.kas.splice(index, 1);
+    try {
 
-    const localKas = JSON.parse(localStorage.getItem("stepa_local_kas") || "[]");
-    const updatedLocal = localKas.filter((_, idx) => idx !== index);
-    localStorage.setItem("stepa_local_kas", JSON.stringify(updatedLocal));
+        await callAPI(
+            "addKas",
+            {
+                ...authParams(),
 
-    renderKas();
-    renderDashboard();
+                jenis:
+                    $("kasJenis")?.value || "",
 
-    toast(`Catatan kas "${ket}" berhasil dihapus.`);
+                keterangan:
+                    $("kasKeterangan")?.value.trim() || "",
+
+                nominal:
+                    $("kasNominal")?.value || "0"
+            }
+        );
+
+        closeModal("kasModal");
+
+        event.target.reset();
+
+        await loadAllData();
+
+        showPage("kas");
+
+        toast(
+            "Transaksi kas berhasil disimpan."
+        );
+
+    } catch (error) {
+
+        console.error(
+            "ADD KAS ERROR:",
+            error
+        );
+
+        toast(
+            "Gagal menyimpan kas: " +
+            error.message
+        );
+    }
+}
+
+async function deleteKas(index) {
+
+    if (!isPengurus()) {
+        toast(
+            "Hanya Pengurus yang dapat menghapus kas."
+        );
+        return;
+    }
+
+    const item =
+        data.kas[index];
+
+    if (!item) {
+        toast("Transaksi tidak ditemukan.");
+        return;
+    }
+
+    const nama =
+        item.keterangan ||
+        "transaksi ini";
+
+    if (
+        !confirm(
+            `Yakin ingin menghapus "${nama}"?`
+        )
+    ) {
+        return;
+    }
+
+    /*
+     * JANGAN langsung splice data lokal.
+     * Hapus dulu di Google Sheets.
+     * Setelah berhasil, loadAllData() mengambil
+     * data terbaru dari server.
+     */
+    try {
+
+        await callAPI(
+            "deleteKas",
+            {
+                ...authParams(),
+                id: item.id
+            }
+        );
+
+        await loadAllData();
+
+        toast(
+            "Transaksi berhasil dihapus permanen."
+        );
+
+    } catch (error) {
+
+        console.error(
+            "DELETE KAS ERROR:",
+            error
+        );
+
+        toast(
+            "Gagal menghapus kas: " +
+            error.message
+        );
+    }
 }
 
 
 /* =========================================================
-   TRANSAKSI KAS & ABSENSI
+   ABSENSI
    ========================================================= */
-async function addKas(e) {
-    e.preventDefault();
-    if (!pengurus()) return toast("Hanya Pengurus yang dapat menambah kas.");
 
-    try {
-        await api("addKas", {
-            ...auth(),
-            jenis: $("kasJenis").value,
-            keterangan: $("kasKeterangan").value.trim(),
-            nominal: $("kasNominal").value
-        });
-        closeModal("kasModal");
-        e.target.reset();
-        await loadData();
-        toast("Transaksi kas berhasil disimpan.");
-    } catch (x) {
-        toast(x.message);
+function setDefaultAbsensiDate() {
+
+    const input =
+        $("absensiTanggal");
+
+    if (
+        input &&
+        !input.value
+    ) {
+        const now =
+            new Date();
+
+        const local =
+            new Date(
+                now.getTime() -
+                now.getTimezoneOffset() * 60000
+            );
+
+        input.value =
+            local.toISOString()
+                .slice(0, 10);
     }
 }
 
-async function addAbsensi(e) {
-    e.preventDefault();
-    if (!pengurus()) return toast("Hanya Pengurus yang dapat mengisi absensi.");
+function populateAbsensiNames() {
+
+    const select =
+        $("absensiNama");
+
+    if (!select) return;
+
+    const current =
+        select.value;
+
+    select.innerHTML =
+        `<option value="">
+            Pilih calon anggota
+        </option>`;
+
+    (data.anggota || [])
+        .forEach(item => {
+
+            if (!item.nama) return;
+
+            const option =
+                document.createElement("option");
+
+            option.value =
+                item.nama;
+
+            option.textContent =
+                item.nama;
+
+            select.appendChild(option);
+        });
+
+    if (
+        current &&
+        [...select.options]
+            .some(o => o.value === current)
+    ) {
+        select.value = current;
+    }
+}
+
+function renderAbsensi() {
+
+    const table =
+        $("absensiTable");
+
+    if (!table) return;
+
+    table.innerHTML = "";
+
+    if (!data.absensi.length) {
+
+        table.innerHTML = `
+            <tr>
+                <td colspan="5" class="empty">
+                    Belum ada data absensi.
+                </td>
+            </tr>
+        `;
+
+        return;
+    }
+
+    data.absensi.forEach(
+        (item, index) => {
+
+            const row =
+                document.createElement("tr");
+
+            row.innerHTML = `
+                <td>
+                    ${escapeHTML(item.tanggal || "-")}
+                </td>
+
+                <td>
+                    ${escapeHTML(item.nama || "-")}
+                </td>
+
+                <td>
+                    <span class="badge ${
+                        String(item.status || "")
+                            .toLowerCase() === "hadir"
+                            ? "hadir"
+                            : "alpa"
+                    }">
+                        ${escapeHTML(item.status || "-")}
+                    </span>
+                </td>
+
+                <td>
+                    ${escapeHTML(
+                        item.keterangan || "-"
+                    )}
+                </td>
+
+                <td class="pengurus-only">
+                    <button
+                        type="button"
+                        class="small-btn danger-btn"
+                        data-absensi-index="${index}"
+                    >
+                        🗑️ Hapus
+                    </button>
+                </td>
+            `;
+
+            row
+                .querySelector("[data-absensi-index]")
+                ?.addEventListener(
+                    "click",
+                    () => deleteAbsensi(item.id)
+                );
+
+            table.appendChild(row);
+        }
+    );
+
+    setupUserRoleUI();
+}
+
+async function handleAddAbsensi(event) {
+
+    event.preventDefault();
+
+    if (!isPengurus()) {
+        toast(
+            "Hanya Pengurus yang dapat mengisi absensi."
+        );
+        return;
+    }
 
     try {
-        await api("addAbsensi", {
-            ...auth(),
-            tanggal: $("absensiTanggal").value,
-            nama: $("absensiNama").value,
-            status: $("absensiStatus").value,
-            keterangan: $("absensiKeterangan").value.trim()
-        });
+
+        await callAPI(
+            "addAbsensi",
+            {
+                ...authParams(),
+
+                tanggal:
+                    $("absensiTanggal")?.value || "",
+
+                nama:
+                    $("absensiNama")?.value || "",
+
+                status:
+                    $("absensiStatus")?.value || "",
+
+                keterangan:
+                    $("absensiKeterangan")
+                        ?.value.trim() || ""
+            }
+        );
+
         closeModal("absensiModal");
-        e.target.reset();
-        await loadData();
-        toast("Absensi berhasil disimpan.");
-    } catch (x) {
-        toast(x.message);
+
+        event.target.reset();
+
+        await loadAllData();
+
+        toast(
+            "Absensi berhasil disimpan."
+        );
+
+    } catch (error) {
+
+        toast(
+            "Gagal menyimpan absensi: " +
+            error.message
+        );
     }
 }
+
+async function deleteAbsensi(id) {
+
+    if (!isPengurus()) {
+        toast(
+            "Anda tidak memiliki akses."
+        );
+        return;
+    }
+
+    if (!id) {
+        toast(
+            "ID absensi tidak ditemukan."
+        );
+        return;
+    }
+
+    if (
+        !confirm(
+            "Apakah Anda yakin ingin menghapus absensi ini?"
+        )
+    ) {
+        return;
+    }
+
+    try {
+
+        await callAPI(
+            "deleteAbsensi",
+            {
+                ...authParams(),
+                id
+            }
+        );
+
+        await loadAllData();
+
+        toast(
+            "Absensi berhasil dihapus."
+        );
+
+    } catch (error) {
+
+        toast(
+            "Gagal menghapus absensi: " +
+            error.message
+        );
+    }
+}
+
 
 /* =========================================================
    MANAJEMEN AKUN
    ========================================================= */
-async function loadUsers() {
-    const table = $("usersTable");
-    if (!table || !pengurus()) return;
 
-    if (!currentUser?.password) {
-        table.innerHTML = `<tr><td colspan="6" class="empty">Silakan logout lalu login kembali untuk mengelola akun.</td></tr>`;
+async function loadUsers() {
+
+    const table =
+        $("usersTable");
+
+    if (!table || !isPengurus()) {
         return;
     }
 
-    table.innerHTML = `<tr><td colspan="6" class="empty">⏳ Memuat akun...</td></tr>`;
+    if (!currentUser?.password) {
+        table.innerHTML = `
+            <tr>
+                <td colspan="6" class="empty">
+                    Silakan login kembali untuk mengelola akun.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    table.innerHTML = `
+        <tr>
+            <td colspan="6" class="empty">
+                ⏳ Memuat akun...
+            </td>
+        </tr>
+    `;
 
     try {
-        const response = await api("listUsers", auth());
-        const users = Array.isArray(response.data) ? response.data : [];
+
+        const response =
+            await callAPI(
+                "listUsers",
+                authParams()
+            );
+
+        const users =
+            Array.isArray(response.data)
+                ? response.data
+                : [];
 
         if (!users.length) {
-            table.innerHTML = `<tr><td colspan="6" class="empty">Belum ada akun.</td></tr>`;
+
+            table.innerHTML = `
+                <tr>
+                    <td colspan="6" class="empty">
+                        Belum ada akun.
+                    </td>
+                </tr>
+            `;
+
             return;
         }
 
         table.innerHTML = "";
 
-        users.forEach((user, index) => {
-            const tr = document.createElement("tr");
-            const statusClass = user.aktif ? "account-status-active" : "account-status-off";
+        users.forEach(
+            (user, index) => {
 
-            tr.innerHTML = `
-                <td>${index + 1}</td>
-                <td>${esc(user.username)}</td>
-                <td>${esc(user.nama)}</td>
-                <td>${esc(user.role)}</td>
-                <td class="${statusClass}">${user.aktif ? "Aktif" : "Nonaktif"}</td>
-                <td>
-                    <div class="account-action">
-                        <button class="account-edit small-btn" type="button">✏️ Edit</button>
+                const row =
+                    document.createElement("tr");
+
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+
+                    <td>
+                        ${escapeHTML(user.username)}
+                    </td>
+
+                    <td>
+                        ${escapeHTML(user.nama)}
+                    </td>
+
+                    <td>
+                        ${escapeHTML(user.role)}
+                    </td>
+
+                    <td>
                         ${
-                            String(user.username).toLowerCase() !== String(currentUser.username).toLowerCase()
-                            ? `<button class="account-delete small-btn" type="button">🗑️ Hapus</button>`
-                            : ""
+                            user.aktif
+                                ? "Aktif"
+                                : "Nonaktif"
                         }
-                    </div>
-                </td>
-            `;
+                    </td>
 
-            tr.querySelector(".account-edit").addEventListener("click", () => openUserModal(user));
+                    <td>
+                        <div class="account-action">
 
-            const deleteBtn = tr.querySelector(".account-delete");
-            if (deleteBtn) {
-                deleteBtn.addEventListener("click", () => deleteUserAccount(user.username));
+                            <button
+                                type="button"
+                                class="account-edit small-btn"
+                            >
+                                ✏️ Edit
+                            </button>
+
+                            ${
+                                String(user.username)
+                                    .toLowerCase() !==
+                                String(currentUser.username)
+                                    .toLowerCase()
+                                    ? `
+                                        <button
+                                            type="button"
+                                            class="account-delete small-btn danger-btn"
+                                        >
+                                            🗑️ Hapus
+                                        </button>
+                                    `
+                                    : ""
+                            }
+
+                        </div>
+                    </td>
+                `;
+
+                row
+                    .querySelector(".account-edit")
+                    ?.addEventListener(
+                        "click",
+                        () => openUserModal(user)
+                    );
+
+                row
+                    .querySelector(".account-delete")
+                    ?.addEventListener(
+                        "click",
+                        () => deleteUserAccount(
+                            user.username
+                        )
+                    );
+
+                table.appendChild(row);
             }
-
-            table.appendChild(tr);
-        });
+        );
 
     } catch (error) {
-        table.innerHTML = `<tr><td colspan="6" class="empty">Gagal memuat akun: ${esc(error.message)}</td></tr>`;
+
+        table.innerHTML = `
+            <tr>
+                <td colspan="6" class="empty">
+                    Gagal memuat akun:
+                    ${escapeHTML(error.message)}
+                </td>
+            </tr>
+        `;
+
         toast(error.message);
     }
 }
 
 function openUserModal(user = null) {
-    if (!pengurus()) return;
 
-    const title = $("userModalTitle");
-    const oldUsername = $("editOldUsername");
-    const username = $("accountUsername");
-    const password = $("accountPassword");
-    const nama = $("accountNama");
-    const role = $("accountRole");
-    const aktif = $("accountAktif");
-    const hint = $("passwordHint");
+    if (!isPengurus()) {
+        toast(
+            "Hanya Pengurus yang dapat mengelola akun."
+        );
+        return;
+    }
 
-    if (!title || !oldUsername || !username || !password || !nama || !role || !aktif) {
-        return toast("Form Manajemen Akun tidak ditemukan.");
+    const title =
+        $("userModalTitle");
+
+    const oldUsername =
+        $("editOldUsername");
+
+    const username =
+        $("accountUsername");
+
+    const password =
+        $("accountPassword");
+
+    const nama =
+        $("accountNama");
+
+    const role =
+        $("accountRole");
+
+    const aktif =
+        $("accountAktif");
+
+    const hint =
+        $("passwordHint");
+
+    if (
+        !title ||
+        !oldUsername ||
+        !username ||
+        !password ||
+        !nama ||
+        !role ||
+        !aktif
+    ) {
+        toast(
+            "Form Manajemen Akun tidak ditemukan."
+        );
+        return;
     }
 
     if (user) {
-        title.textContent = "Edit Akun";
-        oldUsername.value = user.username || "";
-        username.value = user.username || "";
+
+        title.textContent =
+            "Edit Akun";
+
+        oldUsername.value =
+            user.username || "";
+
+        username.value =
+            user.username || "";
+
         password.value = "";
+
         password.required = false;
-        nama.value = user.nama || "";
-        role.value = user.role || "Anggota";
-        aktif.value = user.aktif ? "TRUE" : "FALSE";
-        if (hint) hint.textContent = "Kosongkan password jika tidak ingin mengubahnya.";
+
+        nama.value =
+            user.nama || "";
+
+        role.value =
+            user.role || "Anggota";
+
+        aktif.value =
+            user.aktif
+                ? "TRUE"
+                : "FALSE";
+
+        if (hint) {
+            hint.textContent =
+                "Kosongkan password jika tidak ingin mengubahnya.";
+        }
+
     } else {
-        title.textContent = "Tambah Akun";
+
+        title.textContent =
+            "Tambah Akun";
+
         oldUsername.value = "";
+
         username.value = "";
+
         password.value = "";
+
         password.required = true;
+
         nama.value = "";
+
         role.value = "Anggota";
+
         aktif.value = "TRUE";
-        if (hint) hint.textContent = "Minimal 4 karakter.";
+
+        if (hint) {
+            hint.textContent =
+                "Minimal 4 karakter.";
+        }
     }
 
     openModal("userModal");
 }
 
 async function saveUser(event) {
+
     event.preventDefault();
-    if (!pengurus()) return toast("Akses hanya untuk Pengurus.");
 
-    const oldUsername = $("editOldUsername").value.trim();
-    const username = $("accountUsername").value.trim();
-    const password = $("accountPassword").value;
-    const nama = $("accountNama").value.trim();
-    const role = $("accountRole").value;
-    const aktif = $("accountAktif").value;
+    if (!isPengurus()) {
+        toast(
+            "Akses hanya untuk Pengurus."
+        );
+        return;
+    }
 
-    if (!username || !nama) return toast("Username dan nama wajib diisi.");
-    if (!oldUsername && password.length < 4) return toast("Password minimal 4 karakter.");
-    if (oldUsername && password && password.length < 4) return toast("Password minimal 4 karakter.");
+    const oldUsername =
+        $("editOldUsername")
+            ?.value.trim() || "";
+
+    const username =
+        $("accountUsername")
+            ?.value.trim() || "";
+
+    const password =
+        $("accountPassword")
+            ?.value || "";
+
+    const nama =
+        $("accountNama")
+            ?.value.trim() || "";
+
+    const role =
+        $("accountRole")
+            ?.value || "Anggota";
+
+    const aktif =
+        $("accountAktif")
+            ?.value || "TRUE";
+
+    if (!username || !nama) {
+        toast(
+            "Username dan nama wajib diisi."
+        );
+        return;
+    }
+
+    if (
+        !oldUsername &&
+        password.length < 4
+    ) {
+        toast(
+            "Password minimal 4 karakter."
+        );
+        return;
+    }
+
+    if (
+        oldUsername &&
+        password &&
+        password.length < 4
+    ) {
+        toast(
+            "Password minimal 4 karakter."
+        );
+        return;
+    }
 
     try {
-        const action = oldUsername ? "updateUser" : "addUser";
 
-        await api(action, {
-            ...auth(),
-            oldUsername: oldUsername,
-            username: username,
-            password: password,
-            nama: nama,
-            role: role,
-            aktif: aktif
-        });
+        const action =
+            oldUsername
+                ? "updateUser"
+                : "addUser";
 
-        if (oldUsername && oldUsername.toLowerCase() === currentUser.username.toLowerCase()) {
-            currentUser.username = username;
-            currentUser.nama = nama;
-            currentUser.role = role;
-            if (password) currentUser.password = password;
+        await callAPI(
+            action,
+            {
+                ...authParams(),
 
-            localStorage.setItem("stepa_user", JSON.stringify(currentUser));
+                oldUsername,
+
+                username,
+
+                password,
+
+                nama,
+
+                role,
+
+                aktif
+            }
+        );
+
+        /*
+         * Jika akun sendiri diedit, update session.
+         */
+        if (
+            oldUsername &&
+            oldUsername.toLowerCase() ===
+            currentUser.username.toLowerCase()
+        ) {
+
+            currentUser.username =
+                username;
+
+            currentUser.nama =
+                nama;
+
+            currentUser.role =
+                role;
+
+            if (password) {
+                currentUser.password =
+                    password;
+            }
+
+            localStorage.setItem(
+                "stepa_user",
+                JSON.stringify(currentUser)
+            );
+
             updateUserInfo();
-            setupRole();
+            setupUserRoleUI();
         }
 
         closeModal("userModal");
+
         event.target.reset();
+
         await loadUsers();
-        toast(oldUsername ? "Akun berhasil diperbarui." : "Akun berhasil dibuat.");
+
+        toast(
+            oldUsername
+                ? "Akun berhasil diperbarui."
+                : "Akun berhasil dibuat."
+        );
 
     } catch (error) {
-        toast("Gagal: " + error.message);
+
+        toast(
+            "Gagal menyimpan akun: " +
+            error.message
+        );
     }
 }
 
 async function deleteUserAccount(username) {
-    if (!pengurus()) return;
 
-    if (String(username).toLowerCase() === String(currentUser.username).toLowerCase()) {
-        return toast("Akun yang sedang digunakan tidak boleh dihapus.");
+    if (!isPengurus()) return;
+
+    if (
+        String(username).toLowerCase() ===
+        String(currentUser.username).toLowerCase()
+    ) {
+        toast(
+            "Akun yang sedang digunakan tidak boleh dihapus."
+        );
+        return;
     }
 
-    if (!confirm(`Hapus akun "${username}"?`)) return;
+    if (
+        !confirm(
+            `Hapus akun "${username}"?`
+        )
+    ) {
+        return;
+    }
 
+    /*
+     * Code.gs yang sekarang memiliki ketidaksesuaian:
+     *
+     * case deleteUser:
+     * role(p,"Pengurus",()=>deleteUser(p.username,p.requester))
+     *
+     * role() menggunakan p.username/p.password sebagai
+     * kredensial requester, sedangkan deleteUser juga
+     * menggunakan p.username sebagai akun target.
+     *
+     * Karena itu frontend mengirim requester + targetUsername.
+     * Backend harus menerima targetUsername agar penghapusan
+     * akun berjalan benar.
+     */
     try {
-        await api("deleteUser", {
-            ...auth(),
-            username: username,
-            requester: currentUser.username
-        });
+
+        await callAPI(
+            "deleteUser",
+            {
+                ...authParams(),
+
+                targetUsername:
+                    username,
+
+                requester:
+                    currentUser.username
+            }
+        );
 
         await loadUsers();
-        toast("Akun berhasil dihapus.");
+
+        toast(
+            "Akun berhasil dihapus."
+        );
 
     } catch (error) {
-        toast("Gagal menghapus akun: " + error.message);
+
+        toast(
+            "Gagal menghapus akun: " +
+            error.message
+        );
     }
 }
 
 async function changeMyPassword(event) {
+
     event.preventDefault();
 
-    if (!currentUser?.password) return toast("Silakan logout lalu login kembali.");
+    if (!currentUser?.password) {
+        toast(
+            "Silakan login kembali."
+        );
+        return;
+    }
 
-    const oldPassword = $("oldPasswordAccount").value;
-    const newPassword = $("newPasswordAccount").value;
+    const oldPassword =
+        $("oldPasswordAccount")
+            ?.value || "";
 
-    if (newPassword.length < 4) return toast("Password baru minimal 4 karakter.");
+    const newPassword =
+        $("newPasswordAccount")
+            ?.value || "";
+
+    if (newPassword.length < 4) {
+        toast(
+            "Password baru minimal 4 karakter."
+        );
+        return;
+    }
 
     try {
-        await api("changePassword", {
-            username: currentUser.username,
-            password: currentUser.password,
-            oldPassword: oldPassword,
-            newPassword: newPassword
-        });
 
-        currentUser.password = newPassword;
-        localStorage.setItem("stepa_user", JSON.stringify(currentUser));
+        await callAPI(
+            "changePassword",
+            {
+                username:
+                    currentUser.username,
+
+                password:
+                    currentUser.password,
+
+                oldPassword,
+
+                newPassword
+            }
+        );
+
+        currentUser.password =
+            newPassword;
+
+        localStorage.setItem(
+            "stepa_user",
+            JSON.stringify(currentUser)
+        );
 
         event.target.reset();
-        toast("Password berhasil diubah.");
+
+        toast(
+            "Password berhasil diubah."
+        );
 
     } catch (error) {
-        toast("Gagal mengubah password: " + error.message);
+
+        toast(
+            "Gagal mengubah password: " +
+            error.message
+        );
     }
 }
 
-/* =========================================================
-   LOAD DATA (TERMASUK MEMUAT SIMPANAN LOKAL)
-   ========================================================= */
-async function loadData() {
-    if (!currentUser) return;
-    try {
-        const r = await api("allData", auth());
-        
-        // Ambil data dari server
-        const serverAnggota = r.data?.anggota || [];
-        
-        // Ambil data tambahan yang pernah di-upload lokal dari localStorage
-        const localAnggota = JSON.parse(localStorage.getItem("stepa_local_anggota") || "[]");
-
-        data = {
-            // Gabungkan data server dengan data upload lokal
-            anggota: [...serverAnggota, ...localAnggota],
-            kas: r.data?.kas || [],
-            absensi: r.data?.absensi || []
-        };
-        
-        renderAll();
-    } catch (e) {
-        toast("Gagal memuat data: " + e.message);
-    }
-}
 
 /* =========================================================
-   UPLOAD EXCEL / CSV INTEGRATION (SIMPAN KE LOCALSTORAGE)
+   UPLOAD EXCEL / CSV ANGGOTA
    ========================================================= */
+
 function setupUpload() {
-    const t = $("anggotaTable");
-    if (!t || $("uploadAnggotaBtn")) return;
 
-    const c = t.closest(".table-container");
-    const w = c?.parentElement;
-    if (!w) return;
+    const table =
+        $("anggotaTable");
 
-    const b = document.createElement("button");
-    b.id = "uploadAnggotaBtn";
-    b.className = "primary-btn pengurus-only";
-    b.type = "button";
-    b.textContent = "📁 Upload Excel / CSV";
-    b.style.marginBottom = "12px";
-    b.onclick = () => $("anggotaFileInput").click();
-    w.insertBefore(b, c);
+    if (!table || $("uploadAnggotaBtn")) {
+        return;
+    }
 
-    const i = document.createElement("input");
-    i.id = "anggotaFileInput";
-    i.type = "file";
-    i.accept = ".xlsx,.xls,.csv";
-    i.hidden = true;
-    i.onchange = uploadFile;
-    document.body.appendChild(i);
+    const container =
+        table.closest(".table-container");
 
-    setupRole();
+    if (!container) return;
+
+    const panel =
+        container.parentElement;
+
+    if (!panel) return;
+
+    const button =
+        document.createElement("button");
+
+    button.id =
+        "uploadAnggotaBtn";
+
+    button.type =
+        "button";
+
+    button.className =
+        "primary-btn pengurus-only";
+
+    button.textContent =
+        "📁 Upload Excel / CSV";
+
+    button.style.marginBottom =
+        "12px";
+
+    button.addEventListener(
+        "click",
+        () => {
+            if (!isPengurus()) {
+                toast(
+                    "Hanya Pengurus yang dapat upload."
+                );
+                return;
+            }
+
+            $("anggotaFileInput")?.click();
+        }
+    );
+
+    panel.insertBefore(
+        button,
+        container
+    );
+
+    const input =
+        document.createElement("input");
+
+    input.id =
+        "anggotaFileInput";
+
+    input.type =
+        "file";
+
+    input.accept =
+        ".xlsx,.xls,.csv";
+
+    input.hidden = true;
+
+    input.addEventListener(
+        "change",
+        uploadAnggotaFile
+    );
+
+    document.body.appendChild(input);
+
+    setupUserRoleUI();
 }
 
 function loadXLSX() {
-    if (window.XLSX) return Promise.resolve(window.XLSX);
-    if (xlsxPromise) return xlsxPromise;
 
-    xlsxPromise = new Promise((resolve, reject) => {
-        const s = document.createElement("script");
-        s.src = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
-        s.onload = () => resolve(window.XLSX);
-        s.onerror = () => reject(new Error("Library Excel gagal dimuat."));
-        document.head.appendChild(s);
-    });
+    if (window.XLSX) {
+        return Promise.resolve(
+            window.XLSX
+        );
+    }
+
+    if (xlsxPromise) {
+        return xlsxPromise;
+    }
+
+    xlsxPromise =
+        new Promise(
+            (resolve, reject) => {
+
+                const script =
+                    document.createElement("script");
+
+                script.src =
+                    "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+
+                script.onload =
+                    () => resolve(
+                        window.XLSX
+                    );
+
+                script.onerror =
+                    () => reject(
+                        new Error(
+                            "Library Excel gagal dimuat."
+                        )
+                    );
+
+                document.head.appendChild(
+                    script
+                );
+            }
+        );
 
     return xlsxPromise;
 }
 
-function csv(text) {
-    const lines = text.replace(/^\uFEFF/, "").split(/\r?\n/).filter(line => line.trim());
-    if (lines.length < 2) return [];
-    
-    const delimiter = lines[0].includes(";") ? ";" : ",";
-    const headers = lines.shift().split(delimiter).map(x => x.trim().toLowerCase());
+function parseCSV(text) {
+
+    const cleaned =
+        String(text || "")
+            .replace(/^\uFEFF/, "");
+
+    const lines =
+        cleaned
+            .split(/\r?\n/)
+            .filter(
+                line => line.trim()
+            );
+
+    if (lines.length < 2) {
+        return [];
+    }
+
+    const delimiter =
+        lines[0].includes(";")
+            ? ";"
+            : ",";
+
+    const headers =
+        lines.shift()
+            .split(delimiter)
+            .map(
+                x => x
+                    .trim()
+                    .toLowerCase()
+            );
 
     return lines.map(line => {
-        const arr = line.split(delimiter);
-        const obj = {};
-        headers.forEach((k, idx) => {
-            if (k) obj[k] = (arr[idx] || "").trim();
-        });
-        return obj;
+
+        const values =
+            line.split(delimiter);
+
+        const object = {};
+
+        headers.forEach(
+            (header, index) => {
+
+                if (!header) return;
+
+                object[header] =
+                    String(
+                        values[index] || ""
+                    ).trim();
+            }
+        );
+
+        return object;
     });
 }
 
-function norm(item) {
-    let namaVal = "";
-    let kelasVal = "";
-    let hpVal = "";
-    let statusVal = "";
+function normalizeAnggotaRow(item) {
 
-    Object.keys(item).forEach(key => {
-        const cleanKey = String(key).toLowerCase().replace(/[^a-z0-9]/g, "");
-        const val = String(item[key] || "").trim();
+    let nama = "";
+    let kelas = "";
+    let hp = "";
+    let status = "";
 
-        if (!val) return;
+    Object.keys(item || {})
+        .forEach(key => {
 
-        if (!namaVal && (
-            cleanKey.includes("nama") || 
-            cleanKey.includes("name") || 
-            cleanKey.includes("siswa") || 
-            cleanKey.includes("anggota") || 
-            cleanKey.includes("peserta")
-        )) {
-            namaVal = val;
+            const clean =
+                String(key)
+                    .toLowerCase()
+                    .replace(
+                        /[^a-z0-9]/g,
+                        ""
+                    );
+
+            const value =
+                String(
+                    item[key] ?? ""
+                ).trim();
+
+            if (!value) return;
+
+            if (
+                !nama &&
+                (
+                    clean.includes("nama") ||
+                    clean.includes("name") ||
+                    clean.includes("siswa") ||
+                    clean.includes("anggota") ||
+                    clean.includes("peserta")
+                )
+            ) {
+                nama = value;
+            }
+
+            if (
+                !kelas &&
+                (
+                    clean.includes("kelas") ||
+                    clean.includes("class") ||
+                    clean.includes("jurusan") ||
+                    clean.includes("rombel")
+                )
+            ) {
+                kelas = value;
+            }
+
+            if (
+                !hp &&
+                (
+                    clean === "hp" ||
+                    clean.includes("wa") ||
+                    clean.includes("telp") ||
+                    clean.includes("kontak") ||
+                    clean.includes("phone")
+                )
+            ) {
+                hp = value;
+            }
+
+            if (
+                !status &&
+                clean.includes("status")
+            ) {
+                status = value;
+            }
+        });
+
+    /*
+     * Fallback jika nama kolom tidak standar.
+     */
+    if (!nama) {
+
+        const values =
+            Object.values(item || {})
+                .map(
+                    value =>
+                        String(value).trim()
+                )
+                .filter(Boolean);
+
+        if (values.length) {
+            nama = values[0];
         }
 
-        if (!kelasVal && (
-            cleanKey.includes("kelas") || 
-            cleanKey.includes("class") || 
-            cleanKey.includes("jurusan") || 
-            cleanKey.includes("rombel")
-        )) {
-            kelasVal = val;
+        if (
+            values.length > 1 &&
+            !kelas
+        ) {
+            kelas = values[1];
         }
-
-        if (!hpVal && (
-            cleanKey.includes("hp") || 
-            cleanKey.includes("wa") || 
-            cleanKey.includes("telp") || 
-            cleanKey.includes("kontak") || 
-            cleanKey.includes("phone")
-        )) {
-            hpVal = val;
-        }
-
-        if (!statusVal && cleanKey.includes("status")) {
-            statusVal = val;
-        }
-    });
-
-    if (!namaVal) {
-        const values = Object.values(item).map(v => String(v).trim()).filter(Boolean);
-        if (values.length > 0) namaVal = values[0];
-        if (values.length > 1 && !kelasVal) kelasVal = values[1];
     }
 
     return {
-        nama: namaVal,
-        kelas: kelasVal || "-",
-        hp: hpVal || "-",
-        status: statusVal || "Aktif"
+        nama,
+        kelas: kelas || "-",
+        hp: hp || "-",
+        status: status || "Aktif"
     };
 }
 
-async function uploadFile(e) {
-    const f = e.target.files?.[0];
-    if (!f) return;
+async function uploadAnggotaFile(event) {
 
-    if (!pengurus()) {
-        toast("Hanya Pengurus yang dapat upload.");
-        e.target.value = "";
+    const file =
+        event.target.files?.[0];
+
+    if (!file) return;
+
+    if (!isPengurus()) {
+
+        toast(
+            "Hanya Pengurus yang dapat upload."
+        );
+
+        event.target.value = "";
         return;
     }
 
-    const b = $("uploadAnggotaBtn");
-
     try {
-        let rows;
-        if (f.name.toLowerCase().endsWith(".csv")) {
-            rows = csv(await f.text());
+
+        let rows = [];
+
+        const name =
+            file.name.toLowerCase();
+
+        if (name.endsWith(".csv")) {
+
+            rows =
+                parseCSV(
+                    await file.text()
+                );
+
         } else {
-            const X = await loadXLSX();
-            const wb = X.read(await f.arrayBuffer(), { type: "array" });
-            rows = X.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" });
+
+            const XLSX =
+                await loadXLSX();
+
+            const workbook =
+                XLSX.read(
+                    await file.arrayBuffer(),
+                    { type: "array" }
+                );
+
+            const firstSheet =
+                workbook.Sheets[
+                    workbook.SheetNames[0]
+                ];
+
+            rows =
+                XLSX.utils.sheet_to_json(
+                    firstSheet,
+                    { defval: "" }
+                );
         }
 
-        const dataAnggotaBaru = rows.map(norm).filter(x => x.nama);
-        
-        if (!dataAnggotaBaru.length) {
-            throw new Error("Tidak ada data nama yang bisa dibaca dari file.");
+        const newMembers =
+            rows
+                .map(normalizeAnggotaRow)
+                .filter(
+                    item => item.nama
+                );
+
+        if (!newMembers.length) {
+            throw new Error(
+                "Tidak ada data nama yang bisa dibaca dari file."
+            );
         }
 
-        // 1. Ambil data lokal yang sudah ada sebelumnya
-        const existingLocal = JSON.parse(localStorage.getItem("stepa_local_anggota") || "[]");
-        
-        // 2. Gabungkan data lama + data baru hasil upload
-        const updatedLocal = [...existingLocal, ...dataAnggotaBaru];
-        
-        // 3. Simpan permanen ke localStorage browser
-        localStorage.setItem("stepa_local_anggota", JSON.stringify(updatedLocal));
+        /*
+         * Code.gs yang kamu kirim belum memiliki action
+         * addAnggota. Karena itu upload tetap memakai
+         * penyimpanan lokal yang sudah dipakai website.
+         *
+         * Ini menjaga fitur upload tetap berfungsi tanpa
+         * mengirim request ke action backend yang belum ada.
+         */
+        const existing =
+            JSON.parse(
+                localStorage.getItem(
+                    "stepa_local_anggota"
+                ) || "[]"
+            );
 
-        // 4. Perbarui data di halaman web
-        data.anggota = [...(data.anggota || []), ...dataAnggotaBaru];
+        const updated =
+            [
+                ...(Array.isArray(existing)
+                    ? existing
+                    : []),
+                ...newMembers
+            ];
+
+        localStorage.setItem(
+            "stepa_local_anggota",
+            JSON.stringify(updated)
+        );
+
+        data.anggota = [
+            ...(data.anggota || []),
+            ...newMembers
+        ];
+
         renderAnggota();
-        populateNames();
-        if ($("statAnggota")) $("statAnggota").textContent = data.anggota.length;
+        populateAbsensiNames();
 
-        toast(`${dataAnggotaBaru.length} data anggota berhasil disimpan di website.`);
-
-    } catch (x) {
-        alert("Upload gagal:\n\n" + x.message);
-    } finally {
-        e.target.value = "";
-        if (b) {
-            b.disabled = false;
-            b.textContent = "📁 Upload Excel / CSV";
+        if ($("statAnggota")) {
+            $("statAnggota").textContent =
+                data.anggota.length;
         }
+
+        toast(
+            `${newMembers.length} anggota berhasil di-upload.`
+        );
+
+    } catch (error) {
+
+        console.error(
+            "UPLOAD ERROR:",
+            error
+        );
+
+        toast(
+            "Upload gagal: " +
+            error.message
+        );
+
+    } finally {
+
+        event.target.value = "";
     }
 }
+
+
 /* =========================================================
-   GLOBAL SCOPE EXPORTS
+   GLOBAL EXPORT
    ========================================================= */
+
 window.showPage = showPage;
 window.openModal = openModal;
 window.closeModal = closeModal;
-window.loadData = loadData;
+window.loadAllData = loadAllData;
 window.deleteKas = deleteKas;
+window.deleteAbsensi = deleteAbsensi;
+window.loadUsers = loadUsers;
+window.openUserModal = openUserModal;
+window.syncData = syncData;
