@@ -876,6 +876,68 @@ function renderDashboard() {
 
 
 /* =========================================================
+   CALON ANGGOTA
+   ========================================================= */
+
+function renderAnggota() {
+    const table = $("anggotaTable");
+    if (!table) return;
+
+    const anggota = Array.isArray(data.anggota) ? data.anggota : [];
+
+    if (!anggota.length) {
+        table.innerHTML = `
+            <tr>
+                <td colspan="5" class="empty">
+                    Belum ada data calon anggota.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    table.innerHTML = "";
+
+    anggota.forEach((item, index) => {
+        const row = document.createElement("tr");
+
+        row.innerHTML = `
+            <td>${index + 1}</td>
+            <td>${escapeHTML(item.nama || "-")}</td>
+            <td>${escapeHTML(item.kelas || "-")}</td>
+            <td>${escapeHTML(item.hp || item.no_hp || "-")}</td>
+            <td>
+                <span class="badge hadir">
+                    ${escapeHTML(item.status || "Aktif")}
+                </span>
+            </td>
+        `;
+
+        table.appendChild(row);
+    });
+
+    if ($("statAnggota")) {
+        $("statAnggota").textContent = anggota.length;
+    }
+}
+
+async function syncData() {
+    if (!currentUser) {
+        toast("Silakan login terlebih dahulu.");
+        return;
+    }
+
+    try {
+        await loadAllData();
+        renderAnggota();
+        toast("Data calon anggota berhasil disinkronkan.");
+    } catch (error) {
+        console.error("SYNC ERROR:", error);
+        toast("Sinkronisasi gagal: " + error.message);
+    }
+}
+
+/* =========================================================
    KAS
    ========================================================= */
 
