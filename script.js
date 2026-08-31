@@ -1,9 +1,10 @@
 /* =========================================================
-   STEPA MANAGEMENT - SCRIPT.JS FINAL
-   Cocok dengan index.html STEPA + Code.gs yang diberikan
+   STEPA MANAGEMENT - SCRIPT.JS FULL
+   GOOGLE SHEETS DATABASE
    ========================================================= */
 
-const API_URL = "https://script.google.com/macros/s/AKfycbxYeIYi85RfKBRPuey7v7Z7c9aJ3Iw6MSx9iAmsDuOYsHOEad6jJY2cvvu3aQYvB5q_Dw/exec";
+const API_URL =
+"https://script.google.com/macros/s/AKfycbxYeIYi85RfKBRPuey7v7Z7c9aJ3Iw6MSx9iAmsDuOYsHOEad6jJY2cvvu3aQYvB5q_Dw/exec";
 
 let currentUser = null;
 
@@ -39,17 +40,24 @@ function formatRupiah(value) {
 }
 
 function isPengurus() {
-    return String(currentUser?.role || "").trim().toLowerCase() === "pengurus";
+    return String(
+        currentUser?.role || ""
+    ).trim().toLowerCase() === "pengurus";
 }
 
 function authParams() {
+
     return {
-        username: currentUser?.username || "",
-        password: currentUser?.password || ""
+        username:
+            currentUser?.username || "",
+
+        password:
+            currentUser?.password || ""
     };
 }
 
 function toast(message) {
+
     const el = $("toast");
 
     if (!el) {
@@ -60,18 +68,23 @@ function toast(message) {
     el.textContent = message;
     el.classList.add("show");
 
-    clearTimeout(window.stepaToastTimer);
+    clearTimeout(
+        window.stepaToastTimer
+    );
 
-    window.stepaToastTimer = setTimeout(() => {
-        el.classList.remove("show");
-    }, 3000);
+    window.stepaToastTimer =
+        setTimeout(() => {
+            el.classList.remove("show");
+        }, 3000);
 }
 
 function openModal(id) {
+
     $(id)?.classList.add("show");
 }
 
 function closeModal(id) {
+
     $(id)?.classList.remove("show");
 }
 
@@ -80,82 +93,130 @@ function closeModal(id) {
    API JSONP
    ========================================================= */
 
-function callAPI(action, params = {}) {
-    return new Promise((resolve, reject) => {
+function callAPI(
+    action,
+    params = {}
+) {
 
-        const callbackName =
-            "stepa_cb_" +
-            Date.now() +
-            "_" +
-            Math.floor(Math.random() * 100000);
+    return new Promise(
+        (resolve, reject) => {
 
-        const query = new URLSearchParams({
-            action,
-            callback: callbackName,
-            ...params
-        });
-
-        const script = document.createElement("script");
-
-        script.src = API_URL + "?" + query.toString();
-
-        let finished = false;
-
-        const timeout = setTimeout(() => {
-            if (finished) return;
-
-            finished = true;
-            cleanup();
-
-            reject(
-                new Error(
-                    "Waktu koneksi habis. Periksa deployment Google Apps Script."
-                )
-            );
-        }, 20000);
-
-        function cleanup() {
-            clearTimeout(timeout);
-            delete window[callbackName];
-
-            if (script.parentNode) {
-                script.parentNode.removeChild(script);
-            }
-        }
-
-        window[callbackName] = (response) => {
-            if (finished) return;
-
-            finished = true;
-            cleanup();
-
-            if (response?.success) {
-                resolve(response);
-            } else {
-                reject(
-                    new Error(
-                        response?.message ||
-                        "Permintaan gagal."
-                    )
+            const callbackName =
+                "stepa_cb_" +
+                Date.now() +
+                "_" +
+                Math.floor(
+                    Math.random() * 100000
                 );
+
+            const query =
+                new URLSearchParams({
+                    action,
+                    callback:
+                        callbackName,
+                    ...params
+                });
+
+            const script =
+                document.createElement(
+                    "script"
+                );
+
+            script.src =
+                API_URL +
+                "?" +
+                query.toString();
+
+            let finished = false;
+
+            const timeout =
+                setTimeout(() => {
+
+                    if (finished)
+                        return;
+
+                    finished = true;
+
+                    cleanup();
+
+                    reject(
+                        new Error(
+                            "Waktu koneksi habis. Periksa deployment Google Apps Script."
+                        )
+                    );
+
+                }, 20000);
+
+            function cleanup() {
+
+                clearTimeout(timeout);
+
+                delete window[
+                    callbackName
+                ];
+
+                if (
+                    script.parentNode
+                ) {
+                    script.parentNode
+                        .removeChild(
+                            script
+                        );
+                }
             }
-        };
 
-        script.onerror = () => {
-            if (finished) return;
+            window[
+                callbackName
+            ] = response => {
 
-            finished = true;
-            cleanup();
+                if (finished)
+                    return;
 
-            reject(
-                new Error(
-                    "Gagal terhubung ke Google Apps Script."
-                )
+                finished = true;
+
+                cleanup();
+
+                if (
+                    response?.success
+                ) {
+
+                    resolve(
+                        response
+                    );
+
+                } else {
+
+                    reject(
+                        new Error(
+                            response?.message ||
+                            "Permintaan gagal."
+                        )
+                    );
+                }
+            };
+
+            script.onerror =
+                () => {
+
+                    if (finished)
+                        return;
+
+                    finished = true;
+
+                    cleanup();
+
+                    reject(
+                        new Error(
+                            "Gagal terhubung ke Google Apps Script."
+                        )
+                    );
+                };
+
+            document.body.appendChild(
+                script
             );
-        };
-
-        document.body.appendChild(script);
-    });
+        }
+    );
 }
 
 
@@ -163,45 +224,54 @@ function callAPI(action, params = {}) {
    START
    ========================================================= */
 
-document.addEventListener("DOMContentLoaded", () => {
-    setupEventListeners();
-    checkSession();
-});
+document.addEventListener(
+    "DOMContentLoaded",
+    () => {
+
+        setupEventListeners();
+
+        checkSession();
+
+    }
+);
 
 
 /* =========================================================
-   SESSION / LOGIN
+   SESSION
    ========================================================= */
 
 function checkSession() {
-    const saved = localStorage.getItem("stepa_user");
+
+    const saved =
+        localStorage.getItem(
+            "stepa_user"
+        );
 
     if (!saved) {
+
         showLoginPage();
+
         return;
     }
 
     try {
-        const user = JSON.parse(saved);
 
-        /*
-         * Password diperlukan oleh Code.gs untuk operasi
-         * Pengurus. Session lama yang tidak punya password
-         * harus login ulang.
-         */
+        const user =
+            JSON.parse(saved);
+
         if (
             !user ||
             !user.username ||
             !user.password
         ) {
-            localStorage.removeItem("stepa_user");
-            currentUser = null;
-            showLoginPage();
 
-            if ($("loginMessage")) {
-                $("loginMessage").textContent =
-                    "Silakan login kembali.";
-            }
+            localStorage.removeItem(
+                "stepa_user"
+            );
+
+            currentUser = null;
+
+            showLoginPage();
 
             return;
         }
@@ -211,13 +281,24 @@ function checkSession() {
         showMainApp();
 
     } catch (error) {
-        localStorage.removeItem("stepa_user");
+
+        localStorage.removeItem(
+            "stepa_user"
+        );
+
         currentUser = null;
+
         showLoginPage();
     }
 }
 
+
+/* =========================================================
+   LOGIN
+   ========================================================= */
+
 async function handleLogin(event) {
+
     event.preventDefault();
 
     const username =
@@ -230,6 +311,7 @@ async function handleLogin(event) {
         $("loginMessage");
 
     if (!username || !password) {
+
         if (message) {
             message.textContent =
                 "Username dan password wajib diisi.";
@@ -239,42 +321,45 @@ async function handleLogin(event) {
     }
 
     if (message) {
-        message.textContent = "tunggu ya";
+        message.textContent =
+            "Sedang masuk...";
     }
 
     try {
-        const response = await callAPI(
-            "login",
-            {
-                username,
-                password
-            }
-        );
+
+        const response =
+            await callAPI(
+                "login",
+                {
+                    username,
+                    password
+                }
+            );
 
         if (
             !response?.success ||
             !response.data
         ) {
+
             throw new Error(
                 response?.message ||
-                "User/Passwordnya salah cah."
+                "Login gagal."
             );
         }
 
-        /*
-         * PENTING:
-         * Password disimpan di session agar request
-         * addKas/deleteKas/allData/listUsers dapat
-         * melewati autentikasi Code.gs.
-         */
         currentUser = {
+
             ...response.data,
+
             password
+
         };
 
         localStorage.setItem(
             "stepa_user",
-            JSON.stringify(currentUser)
+            JSON.stringify(
+                currentUser
+            )
         );
 
         if (message) {
@@ -293,25 +378,39 @@ async function handleLogin(event) {
 
     } catch (error) {
 
+        console.error(
+            "LOGIN ERROR:",
+            error
+        );
+
         if (message) {
+
             message.textContent =
                 "Login gagal: " +
                 error.message;
-        } else {
-            toast(error.message);
-        }
 
-        console.error(
-            "STEPA LOGIN ERROR:",
-            error
-        );
+        } else {
+
+            toast(
+                "Login gagal: " +
+                error.message
+            );
+        }
     }
 }
 
+
+/* =========================================================
+   LOGOUT
+   ========================================================= */
+
 function handleLogout() {
+
     currentUser = null;
 
-    localStorage.removeItem("stepa_user");
+    localStorage.removeItem(
+        "stepa_user"
+    );
 
     data = {
         anggota: [],
@@ -322,40 +421,70 @@ function handleLogout() {
     $("loginForm")?.reset();
 
     if ($("loginMessage")) {
-        $("loginMessage").textContent = "";
+        $("loginMessage")
+            .textContent = "";
     }
 
     showLoginPage();
 }
 
+
+/* =========================================================
+   HALAMAN LOGIN / APP
+   ========================================================= */
+
 function showLoginPage() {
-    const loginPage = $("loginPage");
-    const appPage = $("appPage");
+
+    const loginPage =
+        $("loginPage");
+
+    const appPage =
+        $("appPage");
 
     if (loginPage) {
-        loginPage.style.display = "flex";
+
+        loginPage.style.display =
+            "flex";
     }
 
     if (appPage) {
-        appPage.classList.add("hidden");
-        appPage.style.display = "none";
+
+        appPage.classList.add(
+            "hidden"
+        );
+
+        appPage.style.display =
+            "none";
     }
 }
 
+
 function showMainApp() {
-    const loginPage = $("loginPage");
-    const appPage = $("appPage");
+
+    const loginPage =
+        $("loginPage");
+
+    const appPage =
+        $("appPage");
 
     if (loginPage) {
-        loginPage.style.display = "none";
+
+        loginPage.style.display =
+            "none";
     }
 
     if (appPage) {
-        appPage.classList.remove("hidden");
-        appPage.style.display = "flex";
+
+        appPage.classList.remove(
+            "hidden"
+        );
+
+        appPage.style.display =
+            "flex";
     }
 
     updateUserInfo();
+
     setupUserRoleUI();
 
     showPage("dashboard");
@@ -363,8 +492,15 @@ function showMainApp() {
     loadAllData();
 }
 
+
+/* =========================================================
+   USER INFO
+   ========================================================= */
+
 function updateUserInfo() {
-    if (!currentUser) return;
+
+    if (!currentUser)
+        return;
 
     const nama =
         currentUser.nama ||
@@ -376,27 +512,48 @@ function updateUserInfo() {
         "Anggota";
 
     if ($("userName")) {
-        $("userName").textContent = nama;
+
+        $("userName")
+            .textContent = nama;
     }
 
     if ($("userRole")) {
-        $("userRole").textContent = role;
+
+        $("userRole")
+            .textContent = role;
     }
 
     if ($("userAvatar")) {
-        $("userAvatar").textContent =
-            nama.charAt(0).toUpperCase();
+
+        $("userAvatar")
+            .textContent =
+            nama
+                .charAt(0)
+                .toUpperCase();
     }
 }
 
+
+/* =========================================================
+   ROLE UI
+   ========================================================= */
+
 function setupUserRoleUI() {
-    const visible = isPengurus();
+
+    const pengurus =
+        isPengurus();
 
     document
-        .querySelectorAll(".pengurus-only")
+        .querySelectorAll(
+            ".pengurus-only"
+        )
         .forEach(element => {
+
             element.style.display =
-                visible ? "" : "none";
+                pengurus
+                    ? ""
+                    : "none";
+
         });
 }
 
@@ -407,142 +564,229 @@ function setupUserRoleUI() {
 
 function setupEventListeners() {
 
-    $("loginForm")?.addEventListener(
-        "submit",
-        handleLogin
-    );
+    $("loginForm")
+        ?.addEventListener(
+            "submit",
+            handleLogin
+        );
 
-    $("logoutBtn")?.addEventListener(
-        "click",
-        handleLogout
-    );
+    $("logoutBtn")
+        ?.addEventListener(
+            "click",
+            handleLogout
+        );
 
-    $("showPassword")?.addEventListener(
-        "click",
-        () => {
-            const input = $("password");
-            if (!input) return;
+    $("showPassword")
+        ?.addEventListener(
+            "click",
+            () => {
 
-            input.type =
-                input.type === "password"
-                    ? "text"
-                    : "password";
-        }
-    );
+                const input =
+                    $("password");
 
-    document
-        .querySelectorAll(".nav-item")
-        .forEach(button => {
-            button.addEventListener(
-                "click",
-                () => showPage(button.dataset.page)
-            );
-        });
+                if (!input)
+                    return;
 
-    document
-        .querySelectorAll("[data-page-btn]")
-        .forEach(button => {
-            button.addEventListener(
-                "click",
-                () => showPage(button.dataset.pageBtn)
-            );
-        });
-
-    $("refreshBtn")?.addEventListener(
-        "click",
-        async () => {
-            await loadAllData();
-            toast("Data berhasil diperbarui.");
-        }
-    );
-
-    $("syncBtn")?.addEventListener(
-        "click",
-        syncData
-    );
-
-    $("addKasBtn")?.addEventListener(
-        "click",
-        () => {
-            if (!isPengurus()) {
-                toast(
-                    "Hanya Pengurus yang dapat menginput kas."
-                );
-                return;
+                input.type =
+                    input.type ===
+                    "password"
+                        ? "text"
+                        : "password";
             }
-
-            openModal("kasModal");
-        }
-    );
-
-    $("kasForm")?.addEventListener(
-        "submit",
-        handleAddKas
-    );
-
-    $("addAbsensiBtn")?.addEventListener(
-        "click",
-        () => {
-            if (!isPengurus()) {
-                toast(
-                    "Hanya Pengurus yang dapat menginput absensi."
-                );
-                return;
-            }
-
-            setDefaultAbsensiDate();
-            populateAbsensiNames();
-            openModal("absensiModal");
-        }
-    );
-
-    $("absensiForm")?.addEventListener(
-        "submit",
-        handleAddAbsensi
-    );
-
-    $("addUserBtn")?.addEventListener(
-        "click",
-        () => openUserModal()
-    );
-
-    $("refreshUsersBtn")?.addEventListener(
-        "click",
-        loadUsers
-    );
-
-    $("userForm")?.addEventListener(
-        "submit",
-        saveUser
-    );
-
-    $("myPasswordForm")?.addEventListener(
-        "submit",
-        changeMyPassword
-    );
+        );
 
     document
-        .querySelectorAll(".close-modal")
+        .querySelectorAll(
+            ".nav-item"
+        )
         .forEach(button => {
+
             button.addEventListener(
                 "click",
-                () => closeModal(
-                    button.dataset.close
-                )
+                () => {
+
+                    showPage(
+                        button.dataset.page
+                    );
+
+                }
             );
+
         });
 
     document
-        .querySelectorAll(".modal")
+        .querySelectorAll(
+            "[data-page-btn]"
+        )
+        .forEach(button => {
+
+            button.addEventListener(
+                "click",
+                () => {
+
+                    showPage(
+                        button.dataset.pageBtn
+                    );
+
+                }
+            );
+
+        });
+
+    $("refreshBtn")
+        ?.addEventListener(
+            "click",
+            async () => {
+
+                await loadAllData();
+
+                toast(
+                    "Data berhasil diperbarui."
+                );
+            }
+        );
+
+    $("syncBtn")
+        ?.addEventListener(
+            "click",
+            syncData
+        );
+
+
+    /* KAS */
+
+    $("addKasBtn")
+        ?.addEventListener(
+            "click",
+            () => {
+
+                if (!isPengurus()) {
+
+                    toast(
+                        "Hanya Pengurus yang dapat menginput kas."
+                    );
+
+                    return;
+                }
+
+                openModal(
+                    "kasModal"
+                );
+            }
+        );
+
+    $("kasForm")
+        ?.addEventListener(
+            "submit",
+            handleAddKas
+        );
+
+
+    /* ABSENSI */
+
+    $("addAbsensiBtn")
+        ?.addEventListener(
+            "click",
+            () => {
+
+                if (!isPengurus()) {
+
+                    toast(
+                        "Hanya Pengurus yang dapat menginput absensi."
+                    );
+
+                    return;
+                }
+
+                setDefaultAbsensiDate();
+
+                populateAbsensiNames();
+
+                openModal(
+                    "absensiModal"
+                );
+            }
+        );
+
+    $("absensiForm")
+        ?.addEventListener(
+            "submit",
+            handleAddAbsensi
+        );
+
+
+    /* USER */
+
+    $("addUserBtn")
+        ?.addEventListener(
+            "click",
+            () => openUserModal()
+        );
+
+    $("refreshUsersBtn")
+        ?.addEventListener(
+            "click",
+            loadUsers
+        );
+
+    $("userForm")
+        ?.addEventListener(
+            "submit",
+            saveUser
+        );
+
+    $("myPasswordForm")
+        ?.addEventListener(
+            "submit",
+            changeMyPassword
+        );
+
+
+    /* MODAL */
+
+    document
+        .querySelectorAll(
+            ".close-modal"
+        )
+        .forEach(button => {
+
+            button.addEventListener(
+                "click",
+                () => {
+
+                    closeModal(
+                        button.dataset.close
+                    );
+
+                }
+            );
+
+        });
+
+    document
+        .querySelectorAll(
+            ".modal"
+        )
         .forEach(modal => {
+
             modal.addEventListener(
                 "click",
                 event => {
-                    if (event.target === modal) {
-                        modal.classList.remove("show");
+
+                    if (
+                        event.target ===
+                        modal
+                    ) {
+
+                        modal.classList
+                            .remove(
+                                "show"
+                            );
                     }
+
                 }
             );
+
         });
 }
 
@@ -561,43 +805,62 @@ function showPage(pageName) {
         "akun"
     ];
 
-    if (!pages.includes(pageName)) {
-        pageName = "dashboard";
+    if (
+        !pages.includes(
+            pageName
+        )
+    ) {
+
+        pageName =
+            "dashboard";
     }
 
-    /*
-     * Manajemen akun hanya untuk Pengurus.
-     */
     if (
         pageName === "akun" &&
         !isPengurus()
     ) {
+
         toast(
             "Manajemen Akun hanya dapat diakses Pengurus."
         );
 
-        pageName = "dashboard";
+        pageName =
+            "dashboard";
     }
 
     document
-        .querySelectorAll(".page")
+        .querySelectorAll(
+            ".page"
+        )
         .forEach(page => {
-            page.classList.remove("active-page");
+
+            page.classList.remove(
+                "active-page"
+            );
+
         });
 
     $(pageName + "Page")
-        ?.classList.add("active-page");
+        ?.classList.add(
+            "active-page"
+        );
 
     document
-        .querySelectorAll(".nav-item")
+        .querySelectorAll(
+            ".nav-item"
+        )
         .forEach(item => {
+
             item.classList.toggle(
                 "active",
-                item.dataset.page === pageName
+                item.dataset.page ===
+                    pageName
             );
+
         });
 
     const titles = {
+
         dashboard: [
             "Dashboard",
             "Ringkasan kegiatan STEPA"
@@ -625,82 +888,116 @@ function showPage(pageName) {
     };
 
     if ($("pageTitle")) {
-        $("pageTitle").textContent =
+
+        $("pageTitle")
+            .textContent =
             titles[pageName][0];
     }
 
     if ($("pageSubtitle")) {
-        $("pageSubtitle").textContent =
+
+        $("pageSubtitle")
+            .textContent =
             titles[pageName][1];
     }
 
-    if (pageName === "dashboard") {
+    if (
+        pageName ===
+        "dashboard"
+    ) {
+
         renderDashboard();
     }
 
-    if (pageName === "kas") {
+    if (
+        pageName === "kas"
+    ) {
+
         renderKas();
     }
 
-    if (pageName === "absensi") {
+    if (
+        pageName === "absensi"
+    ) {
+
         renderAbsensi();
+
         populateAbsensiNames();
     }
 
-    if (pageName === "anggota") {
+    if (
+        pageName === "anggota"
+    ) {
+
         renderAnggota();
+
         setupUpload();
     }
 
-    if (pageName === "akun") {
+    if (
+        pageName === "akun"
+    ) {
+
         loadUsers();
     }
 }
 
 
 /* =========================================================
-   LOAD DATA
+   LOAD ALL DATA
    ========================================================= */
 
 async function loadAllData() {
 
-    if (!currentUser) return;
+    if (!currentUser)
+        return;
 
-    if (!currentUser.password) {
+    if (
+        !currentUser.password
+    ) {
+
         toast(
             "Session lama terdeteksi. Silakan login kembali."
         );
 
         handleLogout();
+
         return;
     }
 
     try {
 
-        const response = await callAPI(
-            "allData",
-            authParams()
-        );
+        const response =
+            await callAPI(
+                "allData",
+                authParams()
+            );
 
-        const serverData = response.data || {};
-
-        /*
-         * SEMUA DATA SEKARANG DARI GOOGLE SHEETS.
-         * Jangan gabungkan dengan localStorage.
-         */
+        const serverData =
+            response.data || {};
 
         data = {
-            anggota: Array.isArray(serverData.anggota)
-                ? serverData.anggota
-                : [],
 
-            kas: Array.isArray(serverData.kas)
-                ? serverData.kas
-                : [],
+            anggota:
+                Array.isArray(
+                    serverData.anggota
+                )
+                    ? serverData.anggota
+                    : [],
 
-            absensi: Array.isArray(serverData.absensi)
-                ? serverData.absensi
-                : []
+            kas:
+                Array.isArray(
+                    serverData.kas
+                )
+                    ? serverData.kas
+                    : [],
+
+            absensi:
+                Array.isArray(
+                    serverData.absensi
+                )
+                    ? serverData.absensi
+                    : []
         };
 
         renderAll();
@@ -718,48 +1015,26 @@ async function loadAllData() {
         );
     }
 }
-        /*
-         * Upload Excel/CSV versi frontend lama disimpan
-         * di localStorage. Tetap dipertahankan supaya
-         * data upload yang sudah ada tidak hilang.
-         */
-        const localAnggota =
-            JSON.parse(
-                localStorage.getItem(
-                    "stepa_local_anggota"
-                ) || "[]"
-            );
 
-        if (Array.isArray(localAnggota)) {
-            data.anggota = [
-                ...data.anggota,
-                ...localAnggota
-            ];
-        }
 
-        renderAll();
-
-    } catch (error) {
-
-        console.error(
-            "LOAD DATA ERROR:",
-            error
-        );
-
-        toast(
-            "Gagal memuat data: " +
-            error.message
-        );
-    }
-}
+/* =========================================================
+   RENDER ALL
+   ========================================================= */
 
 function renderAll() {
+
     renderDashboard();
+
     renderAnggota();
+
     renderKas();
+
     renderAbsensi();
+
     populateAbsensiNames();
+
     setupUserRoleUI();
+
     setupUpload();
 }
 
@@ -773,98 +1048,171 @@ function getKasTotals() {
     let masuk = 0;
     let keluar = 0;
 
-    (data.kas || []).forEach(item => {
+    (data.kas || [])
+        .forEach(item => {
 
-        const nominal =
-            Number(item.nominal) || 0;
+            const nominal =
+                Number(
+                    item.nominal
+                ) || 0;
 
-        const jenis =
-            String(item.jenis || "")
-                .trim()
-                .toLowerCase();
+            const jenis =
+                String(
+                    item.jenis || ""
+                )
+                    .trim()
+                    .toLowerCase();
 
-        if (
-            jenis === "pemasukan" ||
-            jenis === "masuk"
-        ) {
-            masuk += nominal;
-        }
+            if (
+                jenis ===
+                    "pemasukan" ||
+                jenis === "masuk"
+            ) {
 
-        if (
-            jenis === "pengeluaran" ||
-            jenis === "keluar"
-        ) {
-            keluar += nominal;
-        }
-    });
+                masuk += nominal;
+            }
+
+            if (
+                jenis ===
+                    "pengeluaran" ||
+                jenis === "keluar"
+            ) {
+
+                keluar += nominal;
+            }
+
+        });
 
     return {
         masuk,
         keluar,
-        saldo: masuk - keluar
+        saldo:
+            masuk - keluar
     };
 }
 
+
 function renderDashboard() {
 
-    const totals = getKasTotals();
+    const totals =
+        getKasTotals();
 
     if ($("statAnggota")) {
-        $("statAnggota").textContent =
+
+        $("statAnggota")
+            .textContent =
             data.anggota.length;
     }
 
     if ($("statMasuk")) {
-        $("statMasuk").textContent =
-            formatRupiah(totals.masuk);
+
+        $("statMasuk")
+            .textContent =
+            formatRupiah(
+                totals.masuk
+            );
     }
 
     if ($("statKeluar")) {
-        $("statKeluar").textContent =
-            formatRupiah(totals.keluar);
+
+        $("statKeluar")
+            .textContent =
+            formatRupiah(
+                totals.keluar
+            );
     }
 
     if ($("statSaldo")) {
-        $("statSaldo").textContent =
-            formatRupiah(totals.saldo);
+
+        $("statSaldo")
+            .textContent =
+            formatRupiah(
+                totals.saldo
+            );
     }
 
     if ($("kasMasuk")) {
-        $("kasMasuk").textContent =
-            formatRupiah(totals.masuk);
+
+        $("kasMasuk")
+            .textContent =
+            formatRupiah(
+                totals.masuk
+            );
     }
 
     if ($("kasKeluar")) {
-        $("kasKeluar").textContent =
-            formatRupiah(totals.keluar);
+
+        $("kasKeluar")
+            .textContent =
+            formatRupiah(
+                totals.keluar
+            );
     }
 
     if ($("kasSaldo")) {
-        $("kasSaldo").textContent =
-            formatRupiah(totals.saldo);
+
+        $("kasSaldo")
+            .textContent =
+            formatRupiah(
+                totals.saldo
+            );
     }
 
-    if ($("dashboardAbsensi")) {
+
+    /* ABSENSI DASHBOARD */
+
+    if (
+        $("dashboardAbsensi")
+    ) {
 
         const rows =
             (data.absensi || [])
                 .slice(-5)
                 .reverse();
 
-        $("dashboardAbsensi").innerHTML =
+        $("dashboardAbsensi")
+            .innerHTML =
+
             rows.map(item => `
+
                 <tr>
-                    <td>${escapeHTML(item.tanggal || "-")}</td>
-                    <td>${escapeHTML(item.nama || "-")}</td>
-                    <td>${escapeHTML(item.status || "-")}</td>
+
+                    <td>
+                        ${escapeHTML(
+                            item.tanggal ||
+                            "-"
+                        )}
+                    </td>
+
+                    <td>
+                        ${escapeHTML(
+                            item.nama ||
+                            "-"
+                        )}
+                    </td>
+
+                    <td>
+                        ${escapeHTML(
+                            item.status ||
+                            "-"
+                        )}
+                    </td>
+
                 </tr>
+
             `).join("") ||
-            `<tr>
-                <td colspan="3">
-                    Belum ada data absensi.
-                </td>
-            </tr>`;
+
+            `
+                <tr>
+                    <td colspan="3">
+                        Belum ada data absensi.
+                    </td>
+                </tr>
+            `;
     }
+
+
+    /* KAS DASHBOARD */
 
     if ($("dashboardKas")) {
 
@@ -873,19 +1221,44 @@ function renderDashboard() {
                 .slice(-5)
                 .reverse();
 
-        $("dashboardKas").innerHTML =
+        $("dashboardKas")
+            .innerHTML =
+
             rows.map(item => `
+
                 <tr>
-                    <td>${escapeHTML(item.tanggal || "-")}</td>
-                    <td>${escapeHTML(item.keterangan || "-")}</td>
-                    <td>${formatRupiah(item.nominal)}</td>
+
+                    <td>
+                        ${escapeHTML(
+                            item.tanggal ||
+                            "-"
+                        )}
+                    </td>
+
+                    <td>
+                        ${escapeHTML(
+                            item.keterangan ||
+                            "-"
+                        )}
+                    </td>
+
+                    <td>
+                        ${formatRupiah(
+                            item.nominal
+                        )}
+                    </td>
+
                 </tr>
+
             `).join("") ||
-            `<tr>
-                <td colspan="3">
-                    Belum ada transaksi kas.
-                </td>
-            </tr>`;
+
+            `
+                <tr>
+                    <td colspan="3">
+                        Belum ada transaksi kas.
+                    </td>
+                </tr>
+            `;
     }
 }
 
@@ -896,12 +1269,16 @@ function renderDashboard() {
 
 function renderAnggota() {
 
-    const table = $("anggotaTable");
+    const table =
+        $("anggotaTable");
 
-    if (!table) return;
+    if (!table)
+        return;
 
     const anggota =
-        Array.isArray(data.anggota)
+        Array.isArray(
+            data.anggota
+        )
             ? data.anggota
             : [];
 
@@ -916,124 +1293,157 @@ function renderAnggota() {
         `;
 
         if ($("statAnggota")) {
-            $("statAnggota").textContent = "0";
+
+            $("statAnggota")
+                .textContent = "0";
         }
+
+        setupUserRoleUI();
 
         return;
     }
 
     table.innerHTML = "";
 
-    anggota.forEach((item, index) => {
+    anggota.forEach(
+        (item, index) => {
 
-        const row =
-            document.createElement("tr");
+            const row =
+                document.createElement(
+                    "tr"
+                );
 
-        row.innerHTML = `
+            row.innerHTML = `
 
-            <td>
-                ${index + 1}
-            </td>
+                <td>
+                    ${index + 1}
+                </td>
 
-            <td>
-                ${escapeHTML(
-                    item.nama || "-"
-                )}
-            </td>
-
-            <td>
-                ${escapeHTML(
-                    item.kelas || "-"
-                )}
-            </td>
-
-            <td>
-                ${escapeHTML(
-                    item.hp ||
-                    item.no_hp ||
-                    "-"
-                )}
-            </td>
-
-            <td>
-                <span class="badge hadir">
+                <td>
                     ${escapeHTML(
-                        item.status ||
-                        "Aktif"
+                        item.nama ||
+                        "-"
                     )}
-                </span>
-            </td>
+                </td>
 
-            ${
-                isPengurus()
-                    ? `
-                        <td>
-                            <button
-                                type="button"
-                                class="small-btn danger-btn"
-                                data-anggota-index="${index}"
-                            >
-                                🗑️ Hapus
-                            </button>
-                        </td>
-                    `
-                    : `
-                        <td>
-                            <span class="badge">
-                                Lihat saja
-                            </span>
-                        </td>
-                    `
-            }
+                <td>
+                    ${escapeHTML(
+                        item.kelas ||
+                        "-"
+                    )}
+                </td>
 
-        `;
+                <td>
+                    ${escapeHTML(
+                        item.hp ||
+                        item.no_hp ||
+                        "-"
+                    )}
+                </td>
 
-        row
-            .querySelector(
-                "[data-anggota-index]"
-            )
-            ?.addEventListener(
-                "click",
-                () => deleteAnggota(index)
+                <td>
+
+                    <span class="badge hadir">
+
+                        ${escapeHTML(
+                            item.status ||
+                            "Aktif"
+                        )}
+
+                    </span>
+
+                </td>
+
+                <td class="pengurus-only">
+
+                    <button
+                        type="button"
+                        class="small-btn danger-btn"
+                        data-anggota-index="${index}"
+                    >
+                        🗑️ Hapus
+                    </button>
+
+                </td>
+            `;
+
+            row
+                .querySelector(
+                    "[data-anggota-index]"
+                )
+                ?.addEventListener(
+                    "click",
+                    () =>
+                        deleteAnggota(
+                            index
+                        )
+                );
+
+            table.appendChild(
+                row
             );
-
-        table.appendChild(row);
-    });
+        }
+    );
 
     if ($("statAnggota")) {
 
-        $("statAnggota").textContent =
+        $("statAnggota")
+            .textContent =
             anggota.length;
     }
-}
 
     setupUserRoleUI();
 }
-async function deleteAnggota(index) {
+
+
+/* =========================================================
+   HAPUS ANGGOTA
+   ========================================================= */
+
+async function deleteAnggota(
+    index
+) {
 
     if (!isPengurus()) {
+
         toast(
             "Hanya Pengurus yang dapat menghapus calon anggota."
         );
+
         return;
     }
 
-    const anggota = data.anggota[index];
+    const item =
+        data.anggota[index];
 
-    if (!anggota) {
+    if (!item) {
+
         toast(
             "Data calon anggota tidak ditemukan."
         );
+
+        return;
+    }
+
+    if (!item.id) {
+
+        toast(
+            "ID calon anggota tidak ditemukan."
+        );
+
         return;
     }
 
     const nama =
-        anggota.nama ||
+        item.nama ||
         "calon anggota ini";
 
-    if (!confirm(
-        `Yakin ingin menghapus "${nama}"?`
-    )) {
+    if (
+        !confirm(
+            `Yakin ingin menghapus "${nama}"?`
+        )
+    ) {
+
         return;
     }
 
@@ -1043,14 +1453,15 @@ async function deleteAnggota(index) {
             "deleteAnggota",
             {
                 ...authParams(),
-                id: anggota.id
+
+                id: item.id
             }
         );
 
         await loadAllData();
 
         toast(
-            `"${nama}" berhasil dihapus.`
+            `"${nama}" berhasil dihapus permanen.`
         );
 
     } catch (error) {
@@ -1067,90 +1478,37 @@ async function deleteAnggota(index) {
     }
 }
 
-        /*
-         * Calon anggota hasil upload Excel/CSV
-         * disimpan di localStorage.
-         */
-        const localData =
-            JSON.parse(
-                ) || "[]"
-            );
 
-        if (Array.isArray(localData)) {
-
-            /*
-             * Cari data yang sesuai.
-             */
-            const posisi =
-                localData.findIndex(item =>
-                    String(item.nama || "")
-                        .trim()
-                        .toLowerCase() ===
-                    String(anggota.nama || "")
-                        .trim()
-                        .toLowerCase() &&
-                    String(item.kelas || "")
-                        .trim()
-                        .toLowerCase() ===
-                    String(anggota.kelas || "")
-                        .trim()
-                        .toLowerCase()
-                );
-
-            if (posisi !== -1) {
-
-                localData.splice(posisi, 1);
-
-
-
-        /*
-         * Hapus juga dari data yang sedang ditampilkan.
-         */
-        data.anggota.splice(index, 1);
-
-        renderAnggota();
-        populateAbsensiNames();
-        renderDashboard();
-
-        toast(
-            `"${nama}" berhasil dihapus.`
-        );
-
-    } catch (error) {
-
-        console.error(
-            "DELETE ANGGOTA ERROR:",
-            error
-        );
-
-        toast(
-            "Gagal menghapus calon anggota: " +
-            error.message
-        );
-    }
-}
+/* =========================================================
+   SYNC
+   ========================================================= */
 
 async function syncData() {
+
     if (!currentUser) {
-        toast("Silakan login terlebih dahulu.");
+
+        toast(
+            "Silakan login terlebih dahulu."
+        );
+
         return;
     }
 
-    try {
-        await loadAllData();
-        renderAnggota();
-        toast("Data calon anggota berhasil disinkronkan.");
-    } catch (error) {
-        console.error("SYNC ERROR:", error);
-        toast("Sinkronisasi gagal: " + error.message);
-    }
+    await loadAllData();
+
+    toast(
+        "Data berhasil disinkronkan."
+    );
 }
+
 
 /* =========================================================
    KAS
    ========================================================= */
 
-function normalizeKasJenis(jenis) {
+function normalizeKasJenis(
+    jenis
+) {
 
     const value =
         String(jenis || "")
@@ -1161,6 +1519,7 @@ function normalizeKasJenis(jenis) {
         value === "pemasukan" ||
         value === "masuk"
     ) {
+
         return "Pemasukan";
     }
 
@@ -1168,21 +1527,26 @@ function normalizeKasJenis(jenis) {
         value === "pengeluaran" ||
         value === "keluar"
     ) {
+
         return "Pengeluaran";
     }
 
     return jenis || "-";
 }
 
+
 function renderKas() {
 
-    const table = $("kasTable");
+    const table =
+        $("kasTable");
 
-    if (!table) return;
+    if (!table)
+        return;
 
     table.innerHTML = "";
 
-    const totals = getKasTotals();
+    const totals =
+        getKasTotals();
 
     if (!data.kas.length) {
 
@@ -1196,97 +1560,145 @@ function renderKas() {
 
     } else {
 
-        data.kas.forEach((item, index) => {
+        data.kas.forEach(
+            (item, index) => {
 
-            const jenis =
-                normalizeKasJenis(item.jenis);
+                const jenis =
+                    normalizeKasJenis(
+                        item.jenis
+                    );
 
-            const nominal =
-                Number(item.nominal) || 0;
+                const nominal =
+                    Number(
+                        item.nominal
+                    ) || 0;
 
-            const isMasuk =
-                jenis === "Pemasukan";
+                const isMasuk =
+                    jenis ===
+                    "Pemasukan";
 
-            const row =
-                document.createElement("tr");
+                const row =
+                    document.createElement(
+                        "tr"
+                    );
 
-            row.innerHTML = `
-                <td>
-                    ${escapeHTML(item.tanggal || "-")}
-                </td>
+                row.innerHTML = `
 
-                <td>
-                    <span class="badge ${
-                        isMasuk
-                            ? "hadir"
-                            : "alpa"
-                    }">
-                        ${escapeHTML(jenis)}
-                    </span>
-                </td>
+                    <td>
+                        ${escapeHTML(
+                            item.tanggal ||
+                            "-"
+                        )}
+                    </td>
 
-                <td>
-                    ${escapeHTML(
-                        item.keterangan || "-"
-                    )}
-                </td>
+                    <td>
 
-                <td>
-                    ${formatRupiah(nominal)}
-                </td>
+                        <span class="badge ${
+                            isMasuk
+                                ? "hadir"
+                                : "alpa"
+                        }">
 
-                <td class="pengurus-only">
-                    <button
-                        type="button"
-                        class="small-btn danger-btn"
-                        data-kas-index="${index}"
-                    >
-                        🗑️ Hapus
-                    </button>
-                </td>
-            `;
+                            ${escapeHTML(
+                                jenis
+                            )}
 
-            row
-                .querySelector("[data-kas-index]")
-                ?.addEventListener(
-                    "click",
-                    () => deleteKas(index)
+                        </span>
+
+                    </td>
+
+                    <td>
+                        ${escapeHTML(
+                            item.keterangan ||
+                            "-"
+                        )}
+                    </td>
+
+                    <td>
+                        ${formatRupiah(
+                            nominal
+                        )}
+                    </td>
+
+                    <td class="pengurus-only">
+
+                        <button
+                            type="button"
+                            class="small-btn danger-btn"
+                            data-kas-index="${index}"
+                        >
+                            🗑️ Hapus
+                        </button>
+
+                    </td>
+                `;
+
+                row
+                    .querySelector(
+                        "[data-kas-index]"
+                    )
+                    ?.addEventListener(
+                        "click",
+                        () =>
+                            deleteKas(
+                                index
+                            )
+                    );
+
+                table.appendChild(
+                    row
                 );
-
-            table.appendChild(row);
-        });
+            }
+        );
     }
 
-    /*
-     * Ini sengaja memakai ID yang benar dari index.html:
-     * kasMasuk, kasKeluar, kasSaldo.
-     */
     if ($("kasMasuk")) {
-        $("kasMasuk").textContent =
-            formatRupiah(totals.masuk);
+
+        $("kasMasuk")
+            .textContent =
+            formatRupiah(
+                totals.masuk
+            );
     }
 
     if ($("kasKeluar")) {
-        $("kasKeluar").textContent =
-            formatRupiah(totals.keluar);
+
+        $("kasKeluar")
+            .textContent =
+            formatRupiah(
+                totals.keluar
+            );
     }
 
     if ($("kasSaldo")) {
-        $("kasSaldo").textContent =
-            formatRupiah(totals.saldo);
+
+        $("kasSaldo")
+            .textContent =
+            formatRupiah(
+                totals.saldo
+            );
     }
 
     setupUserRoleUI();
 }
 
-async function handleAddKas(event) {
+
+/* =========================================================
+   TAMBAH KAS
+   ========================================================= */
+
+async function handleAddKas(
+    event
+) {
 
     event.preventDefault();
 
     if (!isPengurus()) {
+
         toast(
             "Hanya Pengurus yang dapat menambah kas."
         );
+
         return;
     }
 
@@ -1295,20 +1707,27 @@ async function handleAddKas(event) {
         await callAPI(
             "addKas",
             {
+
                 ...authParams(),
 
                 jenis:
-                    $("kasJenis")?.value || "",
+                    $("kasJenis")
+                        ?.value || "",
 
                 keterangan:
-                    $("kasKeterangan")?.value.trim() || "",
+                    $("kasKeterangan")
+                        ?.value
+                        .trim() || "",
 
                 nominal:
-                    $("kasNominal")?.value || "0"
+                    $("kasNominal")
+                        ?.value || "0"
             }
         );
 
-        closeModal("kasModal");
+        closeModal(
+            "kasModal"
+        );
 
         event.target.reset();
 
@@ -1334,12 +1753,21 @@ async function handleAddKas(event) {
     }
 }
 
-async function deleteKas(index) {
+
+/* =========================================================
+   HAPUS KAS
+   ========================================================= */
+
+async function deleteKas(
+    index
+) {
 
     if (!isPengurus()) {
+
         toast(
             "Hanya Pengurus yang dapat menghapus kas."
         );
+
         return;
     }
 
@@ -1347,7 +1775,20 @@ async function deleteKas(index) {
         data.kas[index];
 
     if (!item) {
-        toast("Transaksi tidak ditemukan.");
+
+        toast(
+            "Transaksi tidak ditemukan."
+        );
+
+        return;
+    }
+
+    if (!item.id) {
+
+        toast(
+            "ID transaksi tidak ditemukan."
+        );
+
         return;
     }
 
@@ -1360,24 +1801,31 @@ async function deleteKas(index) {
             `Yakin ingin menghapus "${nama}"?`
         )
     ) {
+
         return;
     }
 
-    /*
-     * JANGAN langsung splice data lokal.
-     * Hapus dulu di Google Sheets.
-     * Setelah berhasil, loadAllData() mengambil
-     * data terbaru dari server.
-     */
     try {
 
-        await callAPI(
-            "deleteKas",
-            {
-                ...authParams(),
-                id: item.id
-            }
-        );
+        const response =
+            await callAPI(
+                "deleteKas",
+                {
+                    ...authParams(),
+
+                    id: item.id
+                }
+            );
+
+        if (
+            !response.success
+        ) {
+
+            throw new Error(
+                response.message ||
+                "Gagal menghapus."
+            );
+        }
 
         await loadAllData();
 
@@ -1413,43 +1861,52 @@ function setDefaultAbsensiDate() {
         input &&
         !input.value
     ) {
+
         const now =
             new Date();
 
         const local =
             new Date(
                 now.getTime() -
-                now.getTimezoneOffset() * 60000
+                now.getTimezoneOffset() *
+                60000
             );
 
         input.value =
-            local.toISOString()
+            local
+                .toISOString()
                 .slice(0, 10);
     }
 }
+
 
 function populateAbsensiNames() {
 
     const select =
         $("absensiNama");
 
-    if (!select) return;
+    if (!select)
+        return;
 
     const current =
         select.value;
 
-    select.innerHTML =
-        `<option value="">
+    select.innerHTML = `
+        <option value="">
             Pilih calon anggota
-        </option>`;
+        </option>
+    `;
 
     (data.anggota || [])
         .forEach(item => {
 
-            if (!item.nama) return;
+            if (!item.nama)
+                return;
 
             const option =
-                document.createElement("option");
+                document.createElement(
+                    "option"
+                );
 
             option.value =
                 item.nama;
@@ -1457,24 +1914,34 @@ function populateAbsensiNames() {
             option.textContent =
                 item.nama;
 
-            select.appendChild(option);
+            select.appendChild(
+                option
+            );
         });
 
     if (
         current &&
         [...select.options]
-            .some(o => o.value === current)
+            .some(
+                option =>
+                    option.value ===
+                    current
+            )
     ) {
-        select.value = current;
+
+        select.value =
+            current;
     }
 }
+
 
 function renderAbsensi() {
 
     const table =
         $("absensiTable");
 
-    if (!table) return;
+    if (!table)
+        return;
 
     table.innerHTML = "";
 
@@ -1495,67 +1962,108 @@ function renderAbsensi() {
         (item, index) => {
 
             const row =
-                document.createElement("tr");
+                document.createElement(
+                    "tr"
+                );
 
             row.innerHTML = `
-                <td>
-                    ${escapeHTML(item.tanggal || "-")}
-                </td>
 
                 <td>
-                    ${escapeHTML(item.nama || "-")}
-                </td>
-
-                <td>
-                    <span class="badge ${
-                        String(item.status || "")
-                            .toLowerCase() === "hadir"
-                            ? "hadir"
-                            : "alpa"
-                    }">
-                        ${escapeHTML(item.status || "-")}
-                    </span>
+                    ${escapeHTML(
+                        item.tanggal ||
+                        "-"
+                    )}
                 </td>
 
                 <td>
                     ${escapeHTML(
-                        item.keterangan || "-"
+                        item.nama ||
+                        "-"
+                    )}
+                </td>
+
+                <td>
+
+                    <span class="badge ${
+                        String(
+                            item.status ||
+                            ""
+                        )
+                            .toLowerCase() ===
+                        "hadir"
+                            ? "hadir"
+                            : "alpa"
+                    }">
+
+                        ${escapeHTML(
+                            item.status ||
+                            "-"
+                        )}
+
+                    </span>
+
+                </td>
+
+                <td>
+                    ${escapeHTML(
+                        item.keterangan ||
+                        "-"
                     )}
                 </td>
 
                 <td class="pengurus-only">
+
                     <button
                         type="button"
                         class="small-btn danger-btn"
-                        data-absensi-index="${index}"
+                        data-absensi-id="${escapeHTML(
+                            item.id
+                        )}"
                     >
                         🗑️ Hapus
                     </button>
+
                 </td>
             `;
 
             row
-                .querySelector("[data-absensi-index]")
+                .querySelector(
+                    "[data-absensi-id]"
+                )
                 ?.addEventListener(
                     "click",
-                    () => deleteAbsensi(item.id)
+                    () =>
+                        deleteAbsensi(
+                            item.id
+                        )
                 );
 
-            table.appendChild(row);
+            table.appendChild(
+                row
+            );
         }
     );
 
     setupUserRoleUI();
 }
 
-async function handleAddAbsensi(event) {
+
+/* =========================================================
+   TAMBAH ABSENSI
+   ========================================================= */
+
+async function handleAddAbsensi(
+    event
+) {
 
     event.preventDefault();
 
     if (!isPengurus()) {
+
         toast(
             "Hanya Pengurus yang dapat mengisi absensi."
         );
+
         return;
     }
 
@@ -1564,24 +2072,31 @@ async function handleAddAbsensi(event) {
         await callAPI(
             "addAbsensi",
             {
+
                 ...authParams(),
 
                 tanggal:
-                    $("absensiTanggal")?.value || "",
+                    $("absensiTanggal")
+                        ?.value || "",
 
                 nama:
-                    $("absensiNama")?.value || "",
+                    $("absensiNama")
+                        ?.value || "",
 
                 status:
-                    $("absensiStatus")?.value || "",
+                    $("absensiStatus")
+                        ?.value || "",
 
                 keterangan:
                     $("absensiKeterangan")
-                        ?.value.trim() || ""
+                        ?.value
+                        .trim() || ""
             }
         );
 
-        closeModal("absensiModal");
+        closeModal(
+            "absensiModal"
+        );
 
         event.target.reset();
 
@@ -1600,19 +2115,30 @@ async function handleAddAbsensi(event) {
     }
 }
 
-async function deleteAbsensi(id) {
+
+/* =========================================================
+   HAPUS ABSENSI
+   ========================================================= */
+
+async function deleteAbsensi(
+    id
+) {
 
     if (!isPengurus()) {
+
         toast(
             "Anda tidak memiliki akses."
         );
+
         return;
     }
 
     if (!id) {
+
         toast(
             "ID absensi tidak ditemukan."
         );
+
         return;
     }
 
@@ -1621,6 +2147,7 @@ async function deleteAbsensi(id) {
             "Apakah Anda yakin ingin menghapus absensi ini?"
         )
     ) {
+
         return;
     }
 
@@ -1629,7 +2156,9 @@ async function deleteAbsensi(id) {
         await callAPI(
             "deleteAbsensi",
             {
+
                 ...authParams(),
+
                 id
             }
         );
@@ -1659,18 +2188,11 @@ async function loadUsers() {
     const table =
         $("usersTable");
 
-    if (!table || !isPengurus()) {
-        return;
-    }
+    if (
+        !table ||
+        !isPengurus()
+    ) {
 
-    if (!currentUser?.password) {
-        table.innerHTML = `
-            <tr>
-                <td colspan="6" class="empty">
-                    Silakan login kembali untuk mengelola akun.
-                </td>
-            </tr>
-        `;
         return;
     }
 
@@ -1691,7 +2213,9 @@ async function loadUsers() {
             );
 
         const users =
-            Array.isArray(response.data)
+            Array.isArray(
+                response.data
+            )
                 ? response.data
                 : [];
 
@@ -1714,21 +2238,32 @@ async function loadUsers() {
             (user, index) => {
 
                 const row =
-                    document.createElement("tr");
+                    document.createElement(
+                        "tr"
+                    );
 
                 row.innerHTML = `
-                    <td>${index + 1}</td>
 
                     <td>
-                        ${escapeHTML(user.username)}
+                        ${index + 1}
                     </td>
 
                     <td>
-                        ${escapeHTML(user.nama)}
+                        ${escapeHTML(
+                            user.username
+                        )}
                     </td>
 
                     <td>
-                        ${escapeHTML(user.role)}
+                        ${escapeHTML(
+                            user.nama
+                        )}
+                    </td>
+
+                    <td>
+                        ${escapeHTML(
+                            user.role
+                        )}
                     </td>
 
                     <td>
@@ -1740,6 +2275,7 @@ async function loadUsers() {
                     </td>
 
                     <td>
+
                         <div class="account-action">
 
                             <button
@@ -1750,10 +2286,12 @@ async function loadUsers() {
                             </button>
 
                             ${
-                                String(user.username)
-                                    .toLowerCase() !==
-                                String(currentUser.username)
-                                    .toLowerCase()
+                                String(
+                                    user.username
+                                ).toLowerCase() !==
+                                String(
+                                    currentUser.username
+                                ).toLowerCase()
                                     ? `
                                         <button
                                             type="button"
@@ -1766,26 +2304,37 @@ async function loadUsers() {
                             }
 
                         </div>
+
                     </td>
                 `;
 
                 row
-                    .querySelector(".account-edit")
+                    .querySelector(
+                        ".account-edit"
+                    )
                     ?.addEventListener(
                         "click",
-                        () => openUserModal(user)
+                        () =>
+                            openUserModal(
+                                user
+                            )
                     );
 
                 row
-                    .querySelector(".account-delete")
+                    .querySelector(
+                        ".account-delete"
+                    )
                     ?.addEventListener(
                         "click",
-                        () => deleteUserAccount(
-                            user.username
-                        )
+                        () =>
+                            deleteUserAccount(
+                                user.username
+                            )
                     );
 
-                table.appendChild(row);
+                table.appendChild(
+                    row
+                );
             }
         );
 
@@ -1795,21 +2344,34 @@ async function loadUsers() {
             <tr>
                 <td colspan="6" class="empty">
                     Gagal memuat akun:
-                    ${escapeHTML(error.message)}
+                    ${escapeHTML(
+                        error.message
+                    )}
                 </td>
             </tr>
         `;
 
-        toast(error.message);
+        toast(
+            error.message
+        );
     }
 }
 
-function openUserModal(user = null) {
+
+/* =========================================================
+   MODAL USER
+   ========================================================= */
+
+function openUserModal(
+    user = null
+) {
 
     if (!isPengurus()) {
+
         toast(
             "Hanya Pengurus yang dapat mengelola akun."
         );
+
         return;
     }
 
@@ -1846,9 +2408,11 @@ function openUserModal(user = null) {
         !role ||
         !aktif
     ) {
+
         toast(
             "Form Manajemen Akun tidak ditemukan."
         );
+
         return;
     }
 
@@ -1865,13 +2429,15 @@ function openUserModal(user = null) {
 
         password.value = "";
 
-        password.required = false;
+        password.required =
+            false;
 
         nama.value =
             user.nama || "";
 
         role.value =
-            user.role || "Anggota";
+            user.role ||
+            "Anggota";
 
         aktif.value =
             user.aktif
@@ -1879,6 +2445,7 @@ function openUserModal(user = null) {
                 : "FALSE";
 
         if (hint) {
+
             hint.textContent =
                 "Kosongkan password jika tidak ingin mengubahnya.";
         }
@@ -1888,37 +2455,56 @@ function openUserModal(user = null) {
         title.textContent =
             "Tambah Akun";
 
-        oldUsername.value = "";
+        oldUsername.value =
+            "";
 
-        username.value = "";
+        username.value =
+            "";
 
-        password.value = "";
+        password.value =
+            "";
 
-        password.required = true;
+        password.required =
+            true;
 
-        nama.value = "";
+        nama.value =
+            "";
 
-        role.value = "Anggota";
+        role.value =
+            "Anggota";
 
-        aktif.value = "TRUE";
+        aktif.value =
+            "TRUE";
 
         if (hint) {
+
             hint.textContent =
                 "Minimal 4 karakter.";
         }
     }
 
-    openModal("userModal");
+    openModal(
+        "userModal"
+    );
 }
 
-async function saveUser(event) {
+
+/* =========================================================
+   SIMPAN USER
+   ========================================================= */
+
+async function saveUser(
+    event
+) {
 
     event.preventDefault();
 
     if (!isPengurus()) {
+
         toast(
             "Akses hanya untuk Pengurus."
         );
+
         return;
     }
 
@@ -1940,16 +2526,23 @@ async function saveUser(event) {
 
     const role =
         $("accountRole")
-            ?.value || "Anggota";
+            ?.value ||
+        "Anggota";
 
     const aktif =
         $("accountAktif")
-            ?.value || "TRUE";
+            ?.value ||
+        "TRUE";
 
-    if (!username || !nama) {
+    if (
+        !username ||
+        !nama
+    ) {
+
         toast(
             "Username dan nama wajib diisi."
         );
+
         return;
     }
 
@@ -1957,9 +2550,11 @@ async function saveUser(event) {
         !oldUsername &&
         password.length < 4
     ) {
+
         toast(
             "Password minimal 4 karakter."
         );
+
         return;
     }
 
@@ -1968,9 +2563,11 @@ async function saveUser(event) {
         password &&
         password.length < 4
     ) {
+
         toast(
             "Password minimal 4 karakter."
         );
+
         return;
     }
 
@@ -1984,6 +2581,7 @@ async function saveUser(event) {
         await callAPI(
             action,
             {
+
                 ...authParams(),
 
                 oldUsername,
@@ -2000,9 +2598,6 @@ async function saveUser(event) {
             }
         );
 
-        /*
-         * Jika akun sendiri diedit, update session.
-         */
         if (
             oldUsername &&
             oldUsername.toLowerCase() ===
@@ -2019,20 +2614,26 @@ async function saveUser(event) {
                 role;
 
             if (password) {
+
                 currentUser.password =
                     password;
             }
 
             localStorage.setItem(
                 "stepa_user",
-                JSON.stringify(currentUser)
+                JSON.stringify(
+                    currentUser
+                )
             );
 
             updateUserInfo();
+
             setupUserRoleUI();
         }
 
-        closeModal("userModal");
+        closeModal(
+            "userModal"
+        );
 
         event.target.reset();
 
@@ -2053,17 +2654,30 @@ async function saveUser(event) {
     }
 }
 
-async function deleteUserAccount(username) {
 
-    if (!isPengurus()) return;
+/* =========================================================
+   HAPUS USER
+   ========================================================= */
+
+async function deleteUserAccount(
+    username
+) {
+
+    if (!isPengurus())
+        return;
 
     if (
-        String(username).toLowerCase() ===
-        String(currentUser.username).toLowerCase()
+        String(username)
+            .toLowerCase() ===
+        String(
+            currentUser.username
+        ).toLowerCase()
     ) {
+
         toast(
             "Akun yang sedang digunakan tidak boleh dihapus."
         );
+
         return;
     }
 
@@ -2072,35 +2686,20 @@ async function deleteUserAccount(username) {
             `Hapus akun "${username}"?`
         )
     ) {
+
         return;
     }
 
-    /*
-     * Code.gs yang sekarang memiliki ketidaksesuaian:
-     *
-     * case deleteUser:
-     * role(p,"Pengurus",()=>deleteUser(p.username,p.requester))
-     *
-     * role() menggunakan p.username/p.password sebagai
-     * kredensial requester, sedangkan deleteUser juga
-     * menggunakan p.username sebagai akun target.
-     *
-     * Karena itu frontend mengirim requester + targetUsername.
-     * Backend harus menerima targetUsername agar penghapusan
-     * akun berjalan benar.
-     */
     try {
 
         await callAPI(
             "deleteUser",
             {
+
                 ...authParams(),
 
                 targetUsername:
-                    username,
-
-                requester:
-                    currentUser.username
+                    username
             }
         );
 
@@ -2119,14 +2718,25 @@ async function deleteUserAccount(username) {
     }
 }
 
-async function changeMyPassword(event) {
+
+/* =========================================================
+   GANTI PASSWORD
+   ========================================================= */
+
+async function changeMyPassword(
+    event
+) {
 
     event.preventDefault();
 
-    if (!currentUser?.password) {
+    if (
+        !currentUser?.password
+    ) {
+
         toast(
             "Silakan login kembali."
         );
+
         return;
     }
 
@@ -2138,10 +2748,14 @@ async function changeMyPassword(event) {
         $("newPasswordAccount")
             ?.value || "";
 
-    if (newPassword.length < 4) {
+    if (
+        newPassword.length < 4
+    ) {
+
         toast(
             "Password baru minimal 4 karakter."
         );
+
         return;
     }
 
@@ -2150,6 +2764,7 @@ async function changeMyPassword(event) {
         await callAPI(
             "changePassword",
             {
+
                 username:
                     currentUser.username,
 
@@ -2167,7 +2782,9 @@ async function changeMyPassword(event) {
 
         localStorage.setItem(
             "stepa_user",
-            JSON.stringify(currentUser)
+            JSON.stringify(
+                currentUser
+            )
         );
 
         event.target.reset();
@@ -2187,30 +2804,43 @@ async function changeMyPassword(event) {
 
 
 /* =========================================================
-   UPLOAD EXCEL / CSV ANGGOTA
+   UPLOAD EXCEL / CSV
    ========================================================= */
 
 function setupUpload() {
 
+    if (!isPengurus())
+        return;
+
     const table =
         $("anggotaTable");
 
-    if (!table || $("uploadAnggotaBtn")) {
+    if (!table)
         return;
-    }
+
+    if (
+        $("uploadAnggotaBtn")
+    )
+        return;
 
     const container =
-        table.closest(".table-container");
+        table.closest(
+            ".table-container"
+        );
 
-    if (!container) return;
+    if (!container)
+        return;
 
     const panel =
         container.parentElement;
 
-    if (!panel) return;
+    if (!panel)
+        return;
 
     const button =
-        document.createElement("button");
+        document.createElement(
+            "button"
+        );
 
     button.id =
         "uploadAnggotaBtn";
@@ -2230,14 +2860,18 @@ function setupUpload() {
     button.addEventListener(
         "click",
         () => {
+
             if (!isPengurus()) {
+
                 toast(
                     "Hanya Pengurus yang dapat upload."
                 );
+
                 return;
             }
 
-            $("anggotaFileInput")?.click();
+            $("anggotaFileInput")
+                ?.click();
         }
     );
 
@@ -2247,7 +2881,9 @@ function setupUpload() {
     );
 
     const input =
-        document.createElement("input");
+        document.createElement(
+            "input"
+        );
 
     input.id =
         "anggotaFileInput";
@@ -2258,27 +2894,37 @@ function setupUpload() {
     input.accept =
         ".xlsx,.xls,.csv";
 
-    input.hidden = true;
+    input.hidden =
+        true;
 
     input.addEventListener(
         "change",
         uploadAnggotaFile
     );
 
-    document.body.appendChild(input);
+    document.body.appendChild(
+        input
+    );
 
     setupUserRoleUI();
 }
 
+
+/* =========================================================
+   LOAD XLSX
+   ========================================================= */
+
 function loadXLSX() {
 
     if (window.XLSX) {
+
         return Promise.resolve(
             window.XLSX
         );
     }
 
     if (xlsxPromise) {
+
         return xlsxPromise;
     }
 
@@ -2287,22 +2933,26 @@ function loadXLSX() {
             (resolve, reject) => {
 
                 const script =
-                    document.createElement("script");
+                    document.createElement(
+                        "script"
+                    );
 
                 script.src =
                     "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
 
                 script.onload =
-                    () => resolve(
-                        window.XLSX
-                    );
+                    () =>
+                        resolve(
+                            window.XLSX
+                        );
 
                 script.onerror =
-                    () => reject(
-                        new Error(
-                            "Library Excel gagal dimuat."
-                        )
-                    );
+                    () =>
+                        reject(
+                            new Error(
+                                "Library Excel gagal dimuat."
+                            )
+                        );
 
                 document.head.appendChild(
                     script
@@ -2313,20 +2963,32 @@ function loadXLSX() {
     return xlsxPromise;
 }
 
+
+/* =========================================================
+   PARSE CSV
+   ========================================================= */
+
 function parseCSV(text) {
 
     const cleaned =
         String(text || "")
-            .replace(/^\uFEFF/, "");
+            .replace(
+                /^\uFEFF/,
+                ""
+            );
 
     const lines =
         cleaned
             .split(/\r?\n/)
             .filter(
-                line => line.trim()
+                line =>
+                    line.trim()
             );
 
-    if (lines.length < 2) {
+    if (
+        lines.length < 2
+    ) {
+
         return [];
     }
 
@@ -2339,43 +3001,62 @@ function parseCSV(text) {
         lines.shift()
             .split(delimiter)
             .map(
-                x => x
-                    .trim()
-                    .toLowerCase()
+                x =>
+                    x
+                        .trim()
+                        .toLowerCase()
             );
 
-    return lines.map(line => {
+    return lines.map(
+        line => {
 
-        const values =
-            line.split(delimiter);
+            const values =
+                line.split(
+                    delimiter
+                );
 
-        const object = {};
+            const object = {};
 
-        headers.forEach(
-            (header, index) => {
+            headers.forEach(
+                (
+                    header,
+                    index
+                ) => {
 
-                if (!header) return;
+                    if (!header)
+                        return;
 
-                object[header] =
-                    String(
-                        values[index] || ""
-                    ).trim();
-            }
-        );
+                    object[header] =
+                        String(
+                            values[index] ||
+                            ""
+                        ).trim();
+                }
+            );
 
-        return object;
-    });
+            return object;
+        }
+    );
 }
 
-function normalizeAnggotaRow(item) {
+
+/* =========================================================
+   NORMALISASI ANGGOTA
+   ========================================================= */
+
+function normalizeAnggotaRow(
+    item
+) {
 
     let nama = "";
     let kelas = "";
     let hp = "";
     let status = "";
 
-    Object.keys(item || {})
-        .forEach(key => {
+    Object.keys(
+        item || {}
+    ).forEach(
+        key => {
 
             const clean =
                 String(key)
@@ -2390,93 +3071,177 @@ function normalizeAnggotaRow(item) {
                     item[key] ?? ""
                 ).trim();
 
-            if (!value) return;
+            if (!value)
+                return;
+
+
+            /* NAMA */
 
             if (
                 !nama &&
                 (
-                    clean.includes("nama") ||
-                    clean.includes("name") ||
-                    clean.includes("siswa") ||
-                    clean.includes("anggota") ||
-                    clean.includes("peserta")
+                    clean.includes(
+                        "nama"
+                    ) ||
+                    clean.includes(
+                        "name"
+                    ) ||
+                    clean.includes(
+                        "siswa"
+                    ) ||
+                    clean.includes(
+                        "anggota"
+                    ) ||
+                    clean.includes(
+                        "peserta"
+                    )
                 )
             ) {
+
                 nama = value;
             }
+
+
+            /* KELAS */
 
             if (
                 !kelas &&
                 (
-                    clean.includes("kelas") ||
-                    clean.includes("class") ||
-                    clean.includes("jurusan") ||
-                    clean.includes("rombel")
+                    clean.includes(
+                        "kelas"
+                    ) ||
+                    clean.includes(
+                        "class"
+                    ) ||
+                    clean.includes(
+                        "jurusan"
+                    ) ||
+                    clean.includes(
+                        "rombel"
+                    )
                 )
             ) {
+
                 kelas = value;
             }
+
+
+            /* HP */
 
             if (
                 !hp &&
                 (
                     clean === "hp" ||
-                    clean.includes("wa") ||
-                    clean.includes("telp") ||
-                    clean.includes("kontak") ||
-                    clean.includes("phone")
+                    clean.includes(
+                        "wa"
+                    ) ||
+                    clean.includes(
+                        "telp"
+                    ) ||
+                    clean.includes(
+                        "kontak"
+                    ) ||
+                    clean.includes(
+                        "phone"
+                    ) ||
+                    clean.includes(
+                        "nomor"
+                    )
                 )
             ) {
+
                 hp = value;
             }
 
+
+            /* STATUS */
+
             if (
                 !status &&
-                clean.includes("status")
+                clean.includes(
+                    "status"
+                )
             ) {
+
                 status = value;
             }
-        });
 
-    /*
-     * Fallback jika nama kolom tidak standar.
-     */
+        }
+    );
+
+
+    /* FALLBACK */
+
     if (!nama) {
 
         const values =
-            Object.values(item || {})
+            Object.values(
+                item || {}
+            )
                 .map(
                     value =>
-                        String(value).trim()
+                        String(
+                            value
+                        ).trim()
                 )
                 .filter(Boolean);
 
-        if (values.length) {
-            nama = values[0];
+        if (
+            values.length
+        ) {
+
+            nama =
+                values[0];
         }
 
         if (
             values.length > 1 &&
             !kelas
         ) {
-            kelas = values[1];
+
+            kelas =
+                values[1];
+        }
+
+        if (
+            values.length > 2 &&
+            !hp
+        ) {
+
+            hp =
+                values[2];
         }
     }
 
     return {
+
         nama,
-        kelas: kelas || "-",
-        hp: hp || "-",
-        status: status || "Aktif"
+
+        kelas:
+            kelas || "-",
+
+        hp:
+            hp || "-",
+
+        status:
+            status || "Aktif"
     };
 }
 
-async function uploadAnggotaFile(event) {
+
+/* =========================================================
+   UPLOAD ANGGOTA → GOOGLE SHEETS
+   ========================================================= */
+
+async function uploadAnggotaFile(
+    event
+) {
 
     const file =
         event.target.files?.[0];
 
-    if (!file) return;
+    if (!file)
+        return;
 
     if (!isPengurus()) {
 
@@ -2485,6 +3250,7 @@ async function uploadAnggotaFile(event) {
         );
 
         event.target.value = "";
+
         return;
     }
 
@@ -2492,16 +3258,29 @@ async function uploadAnggotaFile(event) {
 
         let rows = [];
 
-        const name =
+        const filename =
             file.name.toLowerCase();
 
-        if (name.endsWith(".csv")) {
 
-            rows = parseCSV(
-                await file.text()
-            );
+        /* CSV */
 
-        } else {
+        if (
+            filename.endsWith(
+                ".csv"
+            )
+        ) {
+
+            rows =
+                parseCSV(
+                    await file.text()
+                );
+
+        }
+
+
+        /* EXCEL */
+
+        else {
 
             const XLSX =
                 await loadXLSX();
@@ -2516,117 +3295,110 @@ async function uploadAnggotaFile(event) {
 
             const firstSheet =
                 workbook.Sheets[
-                    workbook.SheetNames[0]
+                    workbook
+                        .SheetNames[0]
                 ];
 
             rows =
-                XLSX.utils.sheet_to_json(
-                    firstSheet,
-                    {
-                        defval: ""
-                    }
-                );
+                XLSX.utils
+                    .sheet_to_json(
+                        firstSheet,
+                        {
+                            defval: ""
+                        }
+                    );
         }
+
+
+        /* NORMALISASI */
 
         const newMembers =
             rows
-                .map(normalizeAnggotaRow)
+                .map(
+                    normalizeAnggotaRow
+                )
                 .filter(
-                    item => item.nama
+                    item =>
+                        item.nama
                 );
 
-        if (!newMembers.length) {
+        if (
+            !newMembers.length
+        ) {
 
             throw new Error(
                 "Tidak ada data nama yang bisa dibaca dari file."
             );
         }
 
-        /*
-         * KIRIM DATA KE GOOGLE SHEETS.
-         * Tidak lagi memakai localStorage.
-         */
 
-        await callAPI(
-            "addAnggotaBulk",
-            {
-                ...authParams(),
+        /* =================================================
+           KIRIM SATU PER SATU KE GOOGLE SHEETS
+           ================================================= */
 
-                anggota:
-                    JSON.stringify(
-                        newMembers
-                    )
+        let berhasil = 0;
+
+        let gagal = 0;
+
+        for (
+            const anggota
+            of newMembers
+        ) {
+
+            try {
+
+                await callAPI(
+                    "addAnggota",
+                    {
+
+                        ...authParams(),
+
+                        nama:
+                            anggota.nama,
+
+                        kelas:
+                            anggota.kelas,
+
+                        hp:
+                            anggota.hp,
+
+                        status:
+                            anggota.status
+                    }
+                );
+
+                berhasil++;
+
+            } catch (error) {
+
+                console.error(
+                    "UPLOAD ROW ERROR:",
+                    anggota,
+                    error
+                );
+
+                gagal++;
             }
-        );
+        }
 
-        /*
-         * Ambil ulang data dari server.
-         */
+
+        /* AMBIL DATA TERBARU */
 
         await loadAllData();
 
-        toast(
-            `${newMembers.length} calon anggota berhasil disimpan.`
-        );
 
-    } catch (error) {
+        if (gagal === 0) {
 
-        console.error(
-            "UPLOAD ERROR:",
-            error
-        );
-
-        toast(
-            "Upload gagal: " +
-            error.message
-        );
-
-    } finally {
-
-        event.target.value = "";
-    }
-}
-        /*
-         * Code.gs yang kamu kirim belum memiliki action
-         * addAnggota. Karena itu upload tetap memakai
-         * penyimpanan lokal yang sudah dipakai website.
-         *
-         * Ini menjaga fitur upload tetap berfungsi tanpa
-         * mengirim request ke action backend yang belum ada.
-         */
-        const existing =
-            JSON.parse(
-                localStorage.getItem(
-                    "stepa_local_anggota"
-                ) || "[]"
+            toast(
+                `${berhasil} calon anggota berhasil di-upload ke Google Sheets.`
             );
 
-        const updated =
-            [
-                ...(Array.isArray(existing)
-                    ? existing
-                    : []),
-                ...newMembers
-            ];
+        } else {
 
-       callAPI("addAnggota", ...)
-       
-        data.anggota = [
-            ...(data.anggota || []),
-            ...newMembers
-        ];
-
-        renderAnggota();
-        populateAbsensiNames();
-
-        if ($("statAnggota")) {
-            $("statAnggota").textContent =
-                data.anggota.length;
+            toast(
+                `${berhasil} berhasil, ${gagal} gagal di-upload.`
+            );
         }
-
-        toast(
-            `${newMembers.length} anggota berhasil di-upload.`
-        );
 
     } catch (error) {
 
@@ -2648,16 +3420,38 @@ async function uploadAnggotaFile(event) {
 
 
 /* =========================================================
-   GLOBAL EXPORT
+   EXPORT GLOBAL
    ========================================================= */
 
-window.showPage = showPage;
-window.openModal = openModal;
-window.closeModal = closeModal;
-window.loadAllData = loadAllData;
-window.deleteKas = deleteKas;
-window.deleteAnggota = deleteAnggota;
-window.deleteAbsensi = deleteAbsensi;
-window.loadUsers = loadUsers;
-window.openUserModal = openUserModal;
-window.syncData = syncData;
+window.showPage =
+    showPage;
+
+window.openModal =
+    openModal;
+
+window.closeModal =
+    closeModal;
+
+window.loadAllData =
+    loadAllData;
+
+window.deleteKas =
+    deleteKas;
+
+window.deleteAnggota =
+    deleteAnggota;
+
+window.deleteAbsensi =
+    deleteAbsensi;
+
+window.loadUsers =
+    loadUsers;
+
+window.openUserModal =
+    openUserModal;
+
+window.syncData =
+    syncData;
+
+window.handleLogout =
+    handleLogout;
