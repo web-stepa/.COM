@@ -239,7 +239,7 @@ async function handleLogin(event) {
     }
 
     if (message) {
-        message.textContent = "Sedang masuk...";
+        message.textContent = "tunggu ya";
     }
 
     try {
@@ -257,7 +257,7 @@ async function handleLogin(event) {
         ) {
             throw new Error(
                 response?.message ||
-                "Login gagal."
+                "User/Passwordnya salah cah."
             );
         }
 
@@ -677,32 +677,47 @@ async function loadAllData() {
 
     try {
 
-        const response =
-            await callAPI(
-                "allData",
-                authParams()
-            );
+        const response = await callAPI(
+            "allData",
+            authParams()
+        );
 
-        const serverData =
-            response.data || {};
+        const serverData = response.data || {};
+
+        /*
+         * SEMUA DATA SEKARANG DARI GOOGLE SHEETS.
+         * Jangan gabungkan dengan localStorage.
+         */
 
         data = {
-            anggota:
-                Array.isArray(serverData.anggota)
-                    ? serverData.anggota
-                    : [],
+            anggota: Array.isArray(serverData.anggota)
+                ? serverData.anggota
+                : [],
 
-            kas:
-                Array.isArray(serverData.kas)
-                    ? serverData.kas
-                    : [],
+            kas: Array.isArray(serverData.kas)
+                ? serverData.kas
+                : [],
 
-            absensi:
-                Array.isArray(serverData.absensi)
-                    ? serverData.absensi
-                    : []
+            absensi: Array.isArray(serverData.absensi)
+                ? serverData.absensi
+                : []
         };
 
+        renderAll();
+
+    } catch (error) {
+
+        console.error(
+            "LOAD DATA ERROR:",
+            error
+        );
+
+        toast(
+            "Gagal memuat data: " +
+            error.message
+        );
+    }
+}
         /*
          * Upload Excel/CSV versi frontend lama disimpan
          * di localStorage. Tetap dipertahankan supaya
@@ -880,14 +895,18 @@ function renderDashboard() {
    ========================================================= */
 
 function renderAnggota() {
+
     const table = $("anggotaTable");
+
     if (!table) return;
 
-    const anggota = Array.isArray(data.anggota)
-        ? data.anggota
-        : [];
+    const anggota =
+        Array.isArray(data.anggota)
+            ? data.anggota
+            : [];
 
     if (!anggota.length) {
+
         table.innerHTML = `
             <tr>
                 <td colspan="6" class="empty">
@@ -907,17 +926,25 @@ function renderAnggota() {
 
     anggota.forEach((item, index) => {
 
-        const row = document.createElement("tr");
+        const row =
+            document.createElement("tr");
 
         row.innerHTML = `
-            <td>${index + 1}</td>
 
             <td>
-                ${escapeHTML(item.nama || "-")}
+                ${index + 1}
             </td>
 
             <td>
-                ${escapeHTML(item.kelas || "-")}
+                ${escapeHTML(
+                    item.nama || "-"
+                )}
+            </td>
+
+            <td>
+                ${escapeHTML(
+                    item.kelas || "-"
+                )}
             </td>
 
             <td>
@@ -931,39 +958,54 @@ function renderAnggota() {
             <td>
                 <span class="badge hadir">
                     ${escapeHTML(
-                        item.status || "Aktif"
+                        item.status ||
+                        "Aktif"
                     )}
                 </span>
             </td>
 
-            <td class="pengurus-only">
-                <button
-                    type="button"
-                    class="small-btn danger-btn"
-                    data-anggota-index="${index}"
-                >
-                    🗑️ Hapus
-                </button>
-            </td>
+            ${
+                isPengurus()
+                    ? `
+                        <td>
+                            <button
+                                type="button"
+                                class="small-btn danger-btn"
+                                data-anggota-index="${index}"
+                            >
+                                🗑️ Hapus
+                            </button>
+                        </td>
+                    `
+                    : `
+                        <td>
+                            <span class="badge">
+                                Lihat saja
+                            </span>
+                        </td>
+                    `
+            }
+
         `;
 
-        const deleteButton =
-            row.querySelector(
+        row
+            .querySelector(
                 "[data-anggota-index]"
+            )
+            ?.addEventListener(
+                "click",
+                () => deleteAnggota(index)
             );
-
-        deleteButton?.addEventListener(
-            "click",
-            () => deleteAnggota(index)
-        );
 
         table.appendChild(row);
     });
 
     if ($("statAnggota")) {
+
         $("statAnggota").textContent =
             anggota.length;
     }
+}
 
     setupUserRoleUI();
 }
@@ -979,7 +1021,9 @@ async function deleteAnggota(index) {
     const anggota = data.anggota[index];
 
     if (!anggota) {
-        toast("Data calon anggota tidak ditemukan.");
+        toast(
+            "Data calon anggota tidak ditemukan."
+        );
         return;
     }
 
@@ -987,15 +1031,41 @@ async function deleteAnggota(index) {
         anggota.nama ||
         "calon anggota ini";
 
-    if (
-        !confirm(
-            `Yakin ingin menghapus "${nama}"?`
-        )
-    ) {
+    if (!confirm(
+        `Yakin ingin menghapus "${nama}"?`
+    )) {
         return;
     }
 
     try {
+
+        await callAPI(
+            "deleteAnggota",
+            {
+                ...authParams(),
+                id: anggota.id
+            }
+        );
+
+        await loadAllData();
+
+        toast(
+            `"${nama}" berhasil dihapus.`
+        );
+
+    } catch (error) {
+
+        console.error(
+            "DELETE ANGGOTA ERROR:",
+            error
+        );
+
+        toast(
+            "Gagal menghapus calon anggota: " +
+            error.message
+        );
+    }
+}
 
         /*
          * Calon anggota hasil upload Excel/CSV
@@ -1003,8 +1073,6 @@ async function deleteAnggota(index) {
          */
         const localData =
             JSON.parse(
-                localStorage.getItem(
-                    "stepa_local_anggota"
                 ) || "[]"
             );
 
@@ -1033,12 +1101,7 @@ async function deleteAnggota(index) {
 
                 localData.splice(posisi, 1);
 
-                localStorage.setItem(
-                    "stepa_local_anggota",
-                    JSON.stringify(localData)
-                );
-            }
-        }
+
 
         /*
          * Hapus juga dari data yang sedang ditampilkan.
@@ -2434,10 +2497,9 @@ async function uploadAnggotaFile(event) {
 
         if (name.endsWith(".csv")) {
 
-            rows =
-                parseCSV(
-                    await file.text()
-                );
+            rows = parseCSV(
+                await file.text()
+            );
 
         } else {
 
@@ -2447,7 +2509,9 @@ async function uploadAnggotaFile(event) {
             const workbook =
                 XLSX.read(
                     await file.arrayBuffer(),
-                    { type: "array" }
+                    {
+                        type: "array"
+                    }
                 );
 
             const firstSheet =
@@ -2458,7 +2522,9 @@ async function uploadAnggotaFile(event) {
             rows =
                 XLSX.utils.sheet_to_json(
                     firstSheet,
-                    { defval: "" }
+                    {
+                        defval: ""
+                    }
                 );
         }
 
@@ -2470,11 +2536,56 @@ async function uploadAnggotaFile(event) {
                 );
 
         if (!newMembers.length) {
+
             throw new Error(
                 "Tidak ada data nama yang bisa dibaca dari file."
             );
         }
 
+        /*
+         * KIRIM DATA KE GOOGLE SHEETS.
+         * Tidak lagi memakai localStorage.
+         */
+
+        await callAPI(
+            "addAnggotaBulk",
+            {
+                ...authParams(),
+
+                anggota:
+                    JSON.stringify(
+                        newMembers
+                    )
+            }
+        );
+
+        /*
+         * Ambil ulang data dari server.
+         */
+
+        await loadAllData();
+
+        toast(
+            `${newMembers.length} calon anggota berhasil disimpan.`
+        );
+
+    } catch (error) {
+
+        console.error(
+            "UPLOAD ERROR:",
+            error
+        );
+
+        toast(
+            "Upload gagal: " +
+            error.message
+        );
+
+    } finally {
+
+        event.target.value = "";
+    }
+}
         /*
          * Code.gs yang kamu kirim belum memiliki action
          * addAnggota. Karena itu upload tetap memakai
@@ -2498,11 +2609,8 @@ async function uploadAnggotaFile(event) {
                 ...newMembers
             ];
 
-        localStorage.setItem(
-            "stepa_local_anggota",
-            JSON.stringify(updated)
-        );
-
+       callAPI("addAnggota", ...)
+       
         data.anggota = [
             ...(data.anggota || []),
             ...newMembers
