@@ -322,7 +322,7 @@ async function handleLogin(event) {
 
     if (message) {
         message.textContent =
-            "Sedang masuk...";
+            "sebentar";
     }
 
     try {
