@@ -146,119 +146,137 @@
         </header>
 
 
-        <!-- ================= DASHBOARD ================= -->
-        <section id="dashboardPage" class="page active-page">
+      <!-- ================= DASHBOARD ================= -->
+<section id="dashboardPage" class="page active-page">
 
-            <div class="stats-grid">
+    <!-- DASHBOARD ANGGOTA -->
+    <div
+        id="memberAttendanceDashboard"
+        class="member-attendance-dashboard"
+        hidden>
+    </div>
 
-                <div class="stat-card">
-                    <div class="stat-icon blue">👥</div>
 
-                    <div>
-                        <span>Calon Anggota</span>
-                        <strong id="statAnggota">0</strong>
-                    </div>
+    <!-- DASHBOARD PENGURUS -->
+    <div id="pengurusDashboard">
+
+        <div class="stats-grid">
+
+            <div class="stat-card">
+                <div class="stat-icon blue">👥</div>
+                <div>
+                    <span>Calon Anggota</span>
+                    <strong id="statAnggota">0</strong>
                 </div>
-
-
-                <div class="stat-card">
-                    <div class="stat-icon green">💰</div>
-
-                    <div>
-                        <span>Pemasukan</span>
-                        <strong id="statMasuk">Rp0</strong>
-                    </div>
-                </div>
-
-
-                <div class="stat-card">
-                    <div class="stat-icon red">💸</div>
-
-                    <div>
-                        <span>Pengeluaran</span>
-                        <strong id="statKeluar">Rp0</strong>
-                    </div>
-                </div>
-
-
-                <div class="stat-card">
-                    <div class="stat-icon purple">💵</div>
-
-                    <div>
-                        <span>Saldo Kas</span>
-                        <strong id="statSaldo">Rp0</strong>
-                    </div>
-                </div>
-
             </div>
 
+            <div class="stat-card">
+                <div class="stat-icon green">💰</div>
+                <div>
+                    <span>Pemasukan</span>
+                    <strong id="statMasuk">Rp0</strong>
+                </div>
+            </div>
 
-            <div class="dashboard-grid">
+            <div class="stat-card">
+                <div class="stat-icon red">💸</div>
+                <div>
+                    <span>Pengeluaran</span>
+                    <strong id="statKeluar">Rp0</strong>
+                </div>
+            </div>
 
-                <div class="panel">
+            <div class="stat-card">
+                <div class="stat-icon purple">💵</div>
+                <div>
+                    <span>Saldo Kas</span>
+                    <strong id="statSaldo">Rp0</strong>
+                </div>
+            </div>
 
-                    <div class="panel-header">
+        </div>
+
+
+        <div class="dashboard-grid">
+
+            <div class="panel">
+
+                <div class="panel-header">
+                    <div>
                         <h2>Absensi Terbaru</h2>
-                        <button class="small-btn" data-page-btn="absensi">
-                            Lihat Semua
-                        </button>
                     </div>
 
-                    <div class="table-container">
-
-                        <table>
-
-                            <thead>
-                                <tr>
-                                    <th>Tanggal</th>
-                                    <th>Nama</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-
-                            <tbody id="dashboardAbsensi">
-                            </tbody>
-
-                        </table>
-
-                    </div>
-
+                    <button
+                        class="small-btn"
+                        data-page-btn="absensi">
+                        Lihat Semua
+                    </button>
                 </div>
 
+                <div class="table-container">
 
-                <div class="panel">
+                    <table>
 
-                    <div class="panel-header">
-                        <h2>Transaksi Terbaru</h2>
-                        <button class="small-btn" data-page-btn="kas">
-                            Lihat Semua
-                        </button>
-                    </div>
+                        <thead>
+                            <tr>
+                                <th>Tanggal</th>
+                                <th>Nama</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
 
-                    <div class="table-container">
+                        <tbody id="dashboardAbsensi">
+                        </tbody>
 
-                        <table>
-
-                            <thead>
-                                <tr>
-                                    <th>Tanggal</th>
-                                    <th>Keterangan</th>
-                                    <th>Nominal</th>
-                                </tr>
-                            </thead>
-
-                            <tbody id="dashboardKas">
-                            </tbody>
-
-                        </table>
-
-                    </div>
+                    </table>
 
                 </div>
 
             </div>
 
-        </section>
+
+            <div class="panel">
+
+                <div class="panel-header">
+
+                    <div>
+                        <h2>Transaksi Terbaru</h2>
+                    </div>
+
+                    <button
+                        class="small-btn"
+                        data-page-btn="kas">
+                        Lihat Semua
+                    </button>
+
+                </div>
+
+                <div class="table-container">
+
+                    <table>
+
+                        <thead>
+                            <tr>
+                                <th>Tanggal</th>
+                                <th>Keterangan</th>
+                                <th>Nominal</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="dashboardKas">
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
 
 
         <!-- ================= KAS ================= -->
@@ -389,12 +407,23 @@
                     <p>Data calon anggota dari Google Sheets.</p>
                 </div>
 
-                <button
-                    id="syncBtn"
-                    class="primary-btn pengurus-only"
-                >
-                    🔄 Sinkronisasi
-                </button>
+                <div class="page-action-buttons pengurus-only">
+                    <button
+                        id="uploadAnggotaBtn"
+                        class="primary-btn"
+                        type="button"
+                    >
+                        📤 Upload Data
+                    </button>
+
+                    <button
+                        id="syncBtn"
+                        class="primary-btn"
+                        type="button"
+                    >
+                        🔄 Sinkronisasi
+                    </button>
+                </div>
 
             </div>
 
@@ -458,7 +487,7 @@
                             <tr>
                                 <th>No</th>
                                 <th>Username</th>
-                                <th>Divisi</th>
+                                <th>Nama</th>
                                 <th>Role</th>
                                 <th>Status</th>
                                 <th>Aksi</th>
@@ -656,7 +685,7 @@
             <input type="password" id="accountPassword" minlength="4" autocomplete="new-password">
             <small id="passwordHint">Minimal 4 karakter.</small>
 
-            <label>Divisi</label>
+            <label>Nama</label>
             <input type="text" id="accountNama" required>
 
             <label>Role</label>
@@ -676,10 +705,40 @@
     </div>
 </div>
 
+<!-- ================= MODAL UPLOAD CALON ANGGOTA ================= -->
+<div id="uploadAnggotaModal" class="modal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <div>
+                <h2>Upload Data Calon Anggota</h2>
+                <p>Gunakan file Excel (.xlsx/.xls) atau CSV.</p>
+            </div>
+            <button type="button" class="close-modal" data-close="uploadAnggotaModal">×</button>
+        </div>
+
+        <form id="uploadAnggotaForm">
+            <label for="anggotaFile">File Data</label>
+            <input type="file" id="anggotaFile" accept=".xlsx,.xls,.csv,text/csv" required>
+
+            <p style="font-size:13px;opacity:.75;margin:8px 0 14px;">
+                Kolom yang dikenali: <b>Nama</b>, <b>Kelas</b>, <b>No HP/HP</b>, <b>Status</b>, dan opsional <b>ID</b>.
+            </p>
+
+            <div id="uploadPreview" style="margin:12px 0;"></div>
+
+            <button class="primary-btn" id="uploadAnggotaSubmit" type="submit">
+                📤 Upload ke Google Sheets
+            </button>
+        </form>
+    </div>
+</div>
+
 <div id="toast" class="toast"></div>
 
 
-<script src="script.js"></script>
+<!-- SheetJS dipakai untuk membaca file Excel di browser -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="script.js?v=20260912-FIX-ANGGOTA"></script>
 
 </body>
 </html>
