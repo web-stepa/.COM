@@ -937,16 +937,18 @@ async function handleLogin(event) {
 
         currentUser = {
 
-            ...response.data,
-
-            password: password
+            ...response.data
         };
+
+
+        const { password: _ignoredPassword, ...safeCurrentUser } =
+            currentUser;
 
 
         localStorage.setItem(
             "stepa_user",
             JSON.stringify(
-                currentUser
+                safeCurrentUser
             )
         );
 
@@ -3512,14 +3514,17 @@ async function changeMyPassword(event) {
         );
 
 
-        currentUser.password =
-            newPassword;
+        delete currentUser.password;
+
+
+        const { password: _ignoredPassword, ...safeCurrentUser } =
+            currentUser;
 
 
         localStorage.setItem(
             "stepa_user",
             JSON.stringify(
-                currentUser
+                safeCurrentUser
             )
         );
 
