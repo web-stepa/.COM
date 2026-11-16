@@ -605,7 +605,7 @@ function populateAbsensiNames() {
     });
 }
 
-/* ================= RENDER DASHBOARD ANGGOTA & PENGURUS ================= */
+/* ================= RENDER DASHBOARD ================= */
 function renderDashboard() {
     renderDashboardKas();
     renderDashboardAbsensi();
@@ -625,7 +625,6 @@ function renderMemberDashboardData() {
         $("memberToday").textContent = `${hari[today.getDay()]}, ${String(today.getDate()).padStart(2, "0")} ${bulan[today.getMonth()]} ${today.getFullYear()}`;
     }
 
-    // Hitung statistik kehadiran user yang sedang login
     const userAbsen = (data.absensi || []).filter(item => {
         const itemNama = String(item.nama || "").trim().toLowerCase();
         const curNama = String(currentUser.nama || currentUser.username || "").trim().toLowerCase();
@@ -633,7 +632,6 @@ function renderMemberDashboardData() {
     });
 
     const totalHadir = userAbsen.length;
-    // Asumsi target latihan 10 sesi sebagai acuan persentase progress
     const targetSesi = 10;
     const percentage = Math.min(Math.round((totalHadir / targetSesi) * 100), 100);
 
@@ -651,7 +649,6 @@ function renderMemberDashboardData() {
         $("memberAttendanceLabel").textContent = lbl;
     }
 
-    // Render riwayat tabel anggota
     const table = $("memberRecentAttendance");
     if (!table) return;
     table.innerHTML = "";

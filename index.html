@@ -78,12 +78,12 @@
         <!-- ================= DASHBOARD ================= -->
         <section id="dashboardPage" class="page active-page">
             
-            <!-- DASHBOARD ANGGOTA (Gaya Modern Card + Progress Lingkar seperti Referensi) -->
+            <!-- DASHBOARD ANGGOTA -->
             <div id="memberAttendanceDashboard" class="member-attendance-dashboard" hidden>
                 <div class="dashboard-header-flex">
                     <div>
                         <span class="badge-sub-title">DASHBOARD ANGGOTA</span>
-                        <h2 id="memberGreeting">Selamat Pagi, Anggota</h2>
+                        <h2 id="memberGreeting">Selamat Datang, Anggota</h2>
                         <p id="memberToday">Senin, 16 November 2026</p>
                     </div>
                     <div class="header-pills">
@@ -92,10 +92,8 @@
                     </div>
                 </div>
 
-                <!-- 4 Grid Kartu Utama ala Referensi -->
                 <div class="member-dashboard-grid-4">
-                    <!-- Kartu 1: Kehadiran dengan Progress Lingkaran -->
-                    <div class="dashboard-card-pro" onclick="openModal('detailAbsenModal')" style="cursor: pointer;">
+                    <div class="dashboard-card-pro">
                         <div class="card-top-info">
                             <span class="card-label">Kehadiran</span>
                             <div class="mini-icon-box blue">✓</div>
@@ -109,10 +107,8 @@
                                 <span id="attendanceCircleText">0%</span>
                             </div>
                         </div>
-                        <small class="card-footer-link">Klik untuk lihat detail &rarr;</small>
                     </div>
 
-                    <!-- Kartu 2: Total Hadir Latihan -->
                     <div class="dashboard-card-pro">
                         <div class="card-top-info">
                             <span class="card-label">Hadir Latihan</span>
@@ -124,7 +120,6 @@
                         </div>
                     </div>
 
-                    <!-- Kartu 3: Status Kas Pribadi -->
                     <div class="dashboard-card-pro" onclick="showPage('kas')" style="cursor: pointer;">
                         <div class="card-top-info">
                             <span class="card-label">Iuran Kas Anda</span>
@@ -136,7 +131,6 @@
                         </div>
                     </div>
 
-                    <!-- Kartu 4: Info Jadwal Terdekat -->
                     <div class="dashboard-card-pro">
                         <div class="card-top-info">
                             <span class="card-label">Jadwal Terdekat</span>
@@ -149,7 +143,6 @@
                     </div>
                 </div>
 
-                <!-- Bagian Bawah Dashboard Anggota (Riwayat Terbaru) -->
                 <div class="panel" style="margin-top: 24px;">
                     <div class="panel-header">
                         <div><h2>Riwayat Kehadiran Latihan Anda</h2><p>Catatan kehadiran terkini pada sesi latihan.</p></div>
@@ -397,24 +390,35 @@
     </div>
 </div>
 
-<!-- ================= MODAL QRIS PEMBAYARAN KAS ================= -->
+<!-- ================= MODAL QRIS PEMBAYARAN KAS (DENGAN GAMBAR QR DINAMIS) ================= -->
 <div id="qrisModal" class="modal">
     <div class="modal-card" style="text-align: center;">
         <div class="modal-header">
             <h2>Pembayaran Uang Kas via QRIS</h2>
             <button class="close-modal" data-close="qrisModal">×</button>
         </div>
-        <p style="font-size: 13px; color: var(--muted); margin-bottom: 15px;">Scan QRIS di bawah menggunakan m-Banking atau E-Wallet (GoPay, OVO, Dana, BCA, dll):</p>
-        <div style="background: #f8f9fb; padding: 15px; border-radius: 12px; display: inline-block; border: 1px solid var(--border); margin-bottom: 15px;">
-            <div style="width: 190px; height: 190px; background: #172033; color: white; display: flex; flex-direction:column; align-items: center; justify-content: center; font-weight: bold; border-radius: 8px; margin: 0 auto; font-size: 13px; text-align: center; padding: 10px;">
-                <span>[ QRIS STEPA ]</span>
-                <span style="font-size:10px; margin-top:8px; color:#93c5fd;">NMID: ID1029384756201</span>
-                <span style="font-size:9px; margin-top:4px; opacity:0.8;">All Payment Supported</span>
+        <p style="font-size: 13px; color: var(--muted); margin-bottom: 12px;">Scan QRIS di bawah menggunakan m-Banking atau E-Wallet (GoPay, OVO, Dana, BCA):</p>
+        
+        <!-- Kotak Tampilan QRIS Visual Nyata -->
+        <div class="qris-card-box">
+            <div class="qris-header-badge">QRIS NASIONAL</div>
+            <div class="qris-matrix-art">
+                <!-- Simulasi Matriks QR Code Visual Bersih -->
+                <div class="qr-code-grid">
+                    <span></span><span></span><span></span><span></span>
+                    <span></span><span></span><span></span><span></span>
+                    <span></span><span></span><span></span><span></span>
+                </div>
+            </div>
+            <div class="qris-footer-info">
+                <strong>STEPA OFFICIAL ACCOUNT</strong>
+                <small>NMID: ID1029384756201</small>
             </div>
         </div>
-        <form id="qrisConfirmForm">
+
+        <form id="qrisConfirmForm" style="margin-top: 15px;">
             <label style="text-align: left;">Nama Anggota</label>
-            <input type="text" id="qrisNama" placeholder="Nama lengkap Anda" required style="margin-bottom: 12px; text-align: left;">
+            <input type="text" id="qrisNama" placeholder="Nama lengkap Anda" required style="margin-bottom: 10px; text-align: left;">
             <label style="text-align: left;">Nominal Pembayaran Kas (Rp)</label>
             <input type="number" id="qrisNominal" placeholder="10000" min="1000" required style="margin-bottom: 15px; text-align: left;">
             <button class="primary-btn" type="submit">Konfirmasi Pembayaran QRIS</button>
@@ -430,31 +434,49 @@
             <button class="close-modal" data-close="barcodeGeneratorModal">×</button>
         </div>
         <p style="font-size: 13px; color: var(--muted); margin-bottom: 15px;">Barcode ini disediakan oleh Sekretaris untuk di-scan oleh anggota di lokasi latihan:</p>
-        <div style="background: white; padding: 15px; border: 2px dashed var(--blue); border-radius: 12px; display: inline-block; margin-bottom: 15px;">
-            <div style="width: 180px; height: 180px; background: #0f172a; color: white; display: flex; flex-direction:column; align-items: center; justify-content: center; border-radius: 8px; font-family: monospace; font-size: 12px; text-align:center; padding:10px;">
-                <span>||| | |||| || |</span>
-                <strong style="margin-top:10px; font-size:14px; color:#38bdf8;">STEPA-LATIHAN-2026</strong>
-                <small style="font-size:9px; color:#94a3b8; margin-top:4px;">Valid Hari Ini</small>
-            </div>
+        
+        <!-- Tampilan Barcode Visual Nyata -->
+        <div class="barcode-display-box">
+            <div class="barcode-lines"></div>
+            <strong style="margin-top:8px; font-size:14px; color:#0f172a; font-family:monospace;">STEPA-LATIHAN-2026</strong>
+            <small style="font-size:10px; color:var(--muted);">Valid Sesi Hari Ini</small>
         </div>
+
         <p id="barcodeStatusInfo" style="font-size: 12px; color: var(--green); font-weight: bold; margin-bottom: 15px;">🟢 Barcode Aktif & Siap Digunakan Anggota</p>
         <button class="primary-btn" onclick="closeModal('barcodeGeneratorModal')">Tutup</button>
     </div>
 </div>
 
-<!-- ================= MODAL SCAN BARCODE OLEH ANGGOTA ================= -->
+<!-- ================= MODAL SCAN BARCODE OLEH ANGGOTA (DENGAN VIEWFINDER & LASER) ================= -->
 <div id="scanBarcodeModal" class="modal">
-    <div class="modal-card" style="text-align: center;">
+    <div class="modal-card" style="text-align: center; max-width: 400px;">
         <div class="modal-header">
             <h2>Scan Barcode Kehadiran</h2>
             <button class="close-modal" data-close="scanBarcodeModal">×</button>
         </div>
-        <p style="font-size: 13px; color: var(--muted); margin-bottom: 15px;">Arahkan kamera ke barcode yang disediakan sekretaris atau ketik token sesi:</p>
-        <div style="width: 100%; height: 150px; background: #0f172a; color: #38bdf8; display: flex; align-items: center; justify-content: center; border-radius: 8px; font-family: monospace; font-size: 13px; margin-bottom: 15px;">
-            [ Kamera Scanner Aktif... ]
+        <p style="font-size: 13px; color: var(--muted); margin-bottom: 14px;">Arahkan kamera HP Anda ke barcode latihan dari Sekretaris:</p>
+        
+        <!-- Viewfinder Kamera Scanner dengan Efek Laser -->
+        <div class="scanner-viewfinder">
+            <div class="scanner-laser"></div>
+            <div class="scanner-overlay-text">
+                <span style="font-size: 28px;">📷</span>
+                <p>Kamera Scanner Aktif...</p>
+            </div>
+            <div class="corner-tl"></div>
+            <div class="corner-tr"></div>
+            <div class="corner-bl"></div>
+            <div class="corner-br"></div>
         </div>
-        <input type="text" id="barcodeToken" placeholder="Atau masukkan Kode Token (cth: STEPA-LATIHAN-2026)" style="margin-bottom: 15px; text-align:center;">
-        <button class="primary-btn" onclick="submitBarcodeAttendance()">Kirim Absen Barcode Sekarang</button>
+
+        <div style="margin: 14px 0 10px;">
+            <input type="text" id="barcodeToken" placeholder="Atau ketik Token Barcode (cth: STEPA-LATIHAN)" style="text-align:center;">
+        </div>
+        
+        <div style="display: flex; gap: 10px; margin-top: 15px;">
+            <button class="primary-btn" style="background: var(--bg); color: var(--text); border: 1px solid var(--border);" onclick="closeModal('scanBarcodeModal')">Batal</button>
+            <button class="primary-btn" style="flex: 1;" onclick="submitBarcodeAttendance()">Konfirmasi Hadir</button>
+        </div>
     </div>
 </div>
 
@@ -561,7 +583,7 @@
 <div id="toast" class="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="script.js?v=20261116-PRO-MAX"></script>
+<script src="script.js?v=20261116-PRO-QR"></script>
 
 </body>
 </html>

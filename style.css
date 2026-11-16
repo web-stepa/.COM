@@ -1,5 +1,5 @@
 /* =========================================================
-   STEPA MANAGEMENT — PRO MAX DASHBOARD 2026
+   STEPA MANAGEMENT — PRO MAX SYSTEM 2026
    ========================================================= */
 
 * {
@@ -163,37 +163,25 @@ nav { display: flex; flex-direction: column; gap: 4px; }
 .page { display: none; }
 .page.active-page { display: block; }
 
-/* DASHBOARD ANGGOTA STYLING ALA REFERENSI GAMBAR */
-.dashboard-header-flex {
-    display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 24px;
-}
-.badge-sub-title {
-    display: inline-block; margin-bottom: 6px; color: var(--blue);
-    font-size: 11px; font-weight: 800; letter-spacing: 1px;
-}
+/* DASHBOARD ANGGOTA STYLING */
+.dashboard-header-flex { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 24px; }
+.badge-sub-title { display: inline-block; margin-bottom: 6px; color: var(--blue); font-size: 11px; font-weight: 800; letter-spacing: 1px; }
 .dashboard-header-flex h2 { font-size: 26px; font-weight: 800; color: var(--text); }
 .dashboard-header-flex p { margin-top: 4px; color: var(--muted); font-size: 13px; }
-
 .header-pills { display: flex; gap: 10px; align-items: center; }
 .pill-badge {
     padding: 6px 12px; background: #fff; border: 1px solid var(--border);
-    border-radius: 20px; font-size: 12px; font-weight: 600; color: var(--navy);
-    box-shadow: var(--shadow);
+    border-radius: 20px; font-size: 12px; font-weight: 600; color: var(--navy); box-shadow: var(--shadow);
 }
-
-.member-dashboard-grid-4 {
-    display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-bottom: 24px;
-}
+.member-dashboard-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-bottom: 24px; }
 .dashboard-card-pro {
     background: #fff; border: 1px solid var(--border); border-radius: var(--radius);
     padding: 22px; box-shadow: var(--shadow); position: relative; overflow: hidden;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 .dashboard-card-pro:hover { transform: translateY(-3px); box-shadow: var(--shadow-hover); }
-
 .card-top-info { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 .card-label { color: var(--muted); font-size: 12px; font-weight: 600; }
-
 .mini-icon-box {
     width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
     border-radius: 8px; font-size: 14px; font-weight: bold;
@@ -209,7 +197,6 @@ nav { display: flex; flex-direction: column; gap: 4px; }
 .status-text { display: block; margin-top: 5px; font-size: 12px; font-weight: 700; }
 .status-text.good { color: var(--green); }
 
-/* Progress Lingkaran ala Referensi */
 .attendance-circle {
     --attendance-progress: 0deg;
     width: 70px; height: 70px; display: flex; align-items: center; justify-content: center;
@@ -220,7 +207,103 @@ nav { display: flex; flex-direction: column; gap: 4px; }
     content: ""; position: absolute; width: 54px; height: 54px; border-radius: 50%; background: #fff;
 }
 .attendance-circle span { position: relative; z-index: 1; color: var(--navy); font-size: 14px; font-weight: 800; }
-.card-footer-link { display: block; margin-top: 14px; color: var(--blue); font-size: 11px; font-weight: 700; }
+
+/* QRIS VISUAL CARD STYLE */
+.qris-card-box {
+    background: #fff;
+    border: 2px solid var(--blue);
+    border-radius: 12px;
+    padding: 16px;
+    display: inline-block;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
+    margin-bottom: 10px;
+}
+.qris-header-badge {
+    background: var(--blue);
+    color: white;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 3px 10px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-bottom: 10px;
+    letter-spacing: 1px;
+}
+.qris-matrix-art {
+    width: 170px;
+    height: 170px;
+    background: #f1f5f9;
+    border: 8px solid #0f172a;
+    border-radius: 6px;
+    margin: 0 auto 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+.qr-code-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    width: 110px;
+    height: 110px;
+}
+.qr-code-grid span {
+    background: #0f172a;
+    border-radius: 2px;
+}
+.qr-code-grid span:nth-child(even) { background: #2563eb; }
+.qris-footer-info strong { display: block; font-size: 12px; color: var(--navy); }
+.qris-footer-info small { color: var(--muted); font-size: 10px; }
+
+/* BARCODE DISPLAY BOX */
+.barcode-display-box {
+    background: #f8fafc;
+    border: 2px dashed var(--blue);
+    padding: 16px;
+    border-radius: 12px;
+    display: inline-block;
+}
+.barcode-lines {
+    width: 200px;
+    height: 60px;
+    background: repeating-linear-gradient(90deg, #0f172a, #0f172a 3px, white 3px, white 7px, #0f172a 7px, #0f172a 10px);
+    margin: 0 auto;
+}
+
+/* SCANNER VIEWFINDER & LASER */
+.scanner-viewfinder {
+    position: relative;
+    width: 100%;
+    height: 200px;
+    background: #0f172a;
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #38bdf8;
+    box-shadow: inset 0 0 20px rgba(56, 189, 248, 0.2);
+}
+.scanner-overlay-text { color: #94a3b8; font-size: 12px; text-align: center; z-index: 2; }
+.scanner-overlay-text p { margin-top: 6px; color: #e2e8f0; font-weight: 600; }
+.scanner-laser {
+    position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: #22c55e; box-shadow: 0 0 12px #22c55e, 0 0 20px #22c55e;
+    animation: scanMove 2s infinite ease-in-out; z-index: 3;
+}
+@keyframes scanMove {
+    0% { top: 0%; opacity: 0.8; }
+    50% { top: 95%; opacity: 1; }
+    100% { top: 0%; opacity: 0.8; }
+}
+.corner-tl, .corner-tr, .corner-bl, .corner-br {
+    position: absolute; width: 20px; height: 20px; border-color: #38bdf8; border-style: solid; z-index: 4;
+}
+.corner-tl { top: 12px; left: 12px; border-width: 3px 0 0 3px; }
+.corner-tr { top: 12px; right: 12px; border-width: 3px 3px 0 0; }
+.corner-bl { bottom: 12px; left: 12px; border-width: 0 0 3px 3px; }
+.corner-br { bottom: 12px; right: 12px; border-width: 0 3px 3px 0; }
 
 /* PANELS & TABLES */
 .panel { margin-bottom: 24px; background: #fff; border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
