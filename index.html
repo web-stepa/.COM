@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STEPA Management</title>
+    <title>STEPA Management System</title>
     <link rel="stylesheet" href="style.css">
 </head>
 
@@ -11,701 +11,534 @@
 
 <!-- ================= LOGIN ================= -->
 <div id="loginPage" class="login-page">
-
     <div class="login-card">
-
         <div class="logo">
             <div class="logo-circle">S</div>
             <h1>STEPA</h1>
             <p>Management System</p>
         </div>
-
         <form id="loginForm">
-
             <div class="input-group">
                 <label>Username</label>
-                <input
-                    type="text"
-                    id="username"
-                    placeholder="Masukkan username"
-                    required
-                >
+                <input type="text" id="username" placeholder="Masukkan username" required>
             </div>
-
             <div class="input-group">
                 <label>Password</label>
-
                 <div class="password-box">
-                    <input
-                        type="password"
-                        id="password"
-                        placeholder="Masukkan password"
-                        required
-                    >
-
-                    <button type="button" id="showPassword">
-                        👁
-                    </button>
+                    <input type="password" id="password" placeholder="Masukkan password" required>
+                    <button type="button" id="showPassword">👁</button>
                 </div>
             </div>
-
-            <button class="login-btn" type="submit">
-                Masuk
-            </button>
-
+            <button class="login-btn" type="submit">Masuk</button>
             <p id="loginMessage" class="login-message"></p>
-
         </form>
-
     </div>
-
 </div>
-
 
 <!-- ================= APP ================= -->
 <div id="appPage" class="app hidden">
-
     <!-- SIDEBAR -->
     <aside class="sidebar">
-
         <div class="brand">
             <div class="brand-icon">S</div>
-
             <div>
                 <h2>STEPA</h2>
                 <small>Management</small>
             </div>
         </div>
-
         <nav>
-
-            <button class="nav-item active" data-page="dashboard">
-                📊
-                <span>Dashboard</span>
-            </button>
-
-            <button class="nav-item" data-page="kas">
-                💰
-                <span>Kas</span>
-            </button>
-
-            <button class="nav-item" data-page="absensi">
-                📋
-                <span>Absensi</span>
-            </button>
-
-            <button class="nav-item" data-page="anggota">
-                👥
-                <span>Calon Anggota</span>
-            </button>
-
-            <button class="nav-item pengurus-only" data-page="akun" id="akunNav">
-                ⚙️
-                <span>Manajemen Akun</span>
-            </button>
-
+            <button class="nav-item active" data-page="dashboard">📊 <span>Dashboard</span></button>
+            <button class="nav-item" data-page="kas">💰 <span>Kas & QRIS</span></button>
+            <button class="nav-item" data-page="absensi">📋 <span>Absensi & Barcode</span></button>
+            <button class="nav-item" data-page="anggota">👥 <span>Calon Anggota</span></button>
+            <button class="nav-item pengurus-only" data-page="akun" id="akunNav">⚙️ <span>Manajemen Akun</span></button>
         </nav>
-
         <div class="sidebar-bottom">
-
             <div class="user-box">
                 <div class="avatar" id="userAvatar">P</div>
-
                 <div>
                     <strong id="userName">Pengurus</strong>
                     <small id="userRole">Pengurus</small>
                 </div>
             </div>
-
-            <button id="logoutBtn" class="logout-btn">
-                🚪 Keluar
-            </button>
-
+            <button id="logoutBtn" class="logout-btn">🚪 Keluar</button>
         </div>
-
     </aside>
-
 
     <!-- MAIN -->
     <main class="main">
-
-        <!-- TOPBAR -->
         <header class="topbar">
-
             <div>
                 <h1 id="pageTitle">Dashboard</h1>
-                <p id="pageSubtitle">
-                    Ringkasan kegiatan STEPA
-                </p>
+                <p id="pageSubtitle">Ringkasan kegiatan STEPA</p>
             </div>
-
-            <button id="refreshBtn" class="refresh-btn">
-                🔄 Refresh
-            </button>
-
+            <button id="refreshBtn" class="refresh-btn">🔄 Refresh</button>
         </header>
 
-
-      <!-- ================= DASHBOARD ================= -->
-<section id="dashboardPage" class="page active-page">
-
-    <!-- DASHBOARD ANGGOTA -->
-    <div
-        id="memberAttendanceDashboard"
-        class="member-attendance-dashboard"
-        hidden>
-    </div>
-
-
-    <!-- DASHBOARD PENGURUS -->
-    <div id="pengurusDashboard">
-
-        <div class="stats-grid">
-
-            <div class="stat-card">
-                <div class="stat-icon blue">👥</div>
-                <div>
-                    <span>Calon Anggota</span>
-                    <strong id="statAnggota">0</strong>
-                </div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-icon green">💰</div>
-                <div>
-                    <span>Pemasukan</span>
-                    <strong id="statMasuk">Rp0</strong>
-                </div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-icon red">💸</div>
-                <div>
-                    <span>Pengeluaran</span>
-                    <strong id="statKeluar">Rp0</strong>
-                </div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-icon purple">💵</div>
-                <div>
-                    <span>Saldo Kas</span>
-                    <strong id="statSaldo">Rp0</strong>
-                </div>
-            </div>
-
-        </div>
-
-
-        <div class="dashboard-grid">
-
-            <div class="panel">
-
-                <div class="panel-header">
+        <!-- ================= DASHBOARD ================= -->
+        <section id="dashboardPage" class="page active-page">
+            
+            <!-- DASHBOARD ANGGOTA (Gaya Modern Card + Progress Lingkar seperti Referensi) -->
+            <div id="memberAttendanceDashboard" class="member-attendance-dashboard" hidden>
+                <div class="dashboard-header-flex">
                     <div>
-                        <h2>Absensi Terbaru</h2>
+                        <span class="badge-sub-title">DASHBOARD ANGGOTA</span>
+                        <h2 id="memberGreeting">Selamat Pagi, Anggota</h2>
+                        <p id="memberToday">Senin, 16 November 2026</p>
+                    </div>
+                    <div class="header-pills">
+                        <span class="pill-badge">🟢 2026/2027 • Semester Ganjil</span>
+                        <span class="pill-badge">🏛️ XI TJKT 2</span>
+                    </div>
+                </div>
+
+                <!-- 4 Grid Kartu Utama ala Referensi -->
+                <div class="member-dashboard-grid-4">
+                    <!-- Kartu 1: Kehadiran dengan Progress Lingkaran -->
+                    <div class="dashboard-card-pro" onclick="openModal('detailAbsenModal')" style="cursor: pointer;">
+                        <div class="card-top-info">
+                            <span class="card-label">Kehadiran</span>
+                            <div class="mini-icon-box blue">✓</div>
+                        </div>
+                        <div class="card-main-flex">
+                            <div>
+                                <strong id="memberAttendancePercent" class="big-percent">0%</strong>
+                                <span id="memberAttendanceLabel" class="status-text good">Belum Ada Data</span>
+                            </div>
+                            <div id="attendanceCircle" class="attendance-circle">
+                                <span id="attendanceCircleText">0%</span>
+                            </div>
+                        </div>
+                        <small class="card-footer-link">Klik untuk lihat detail &rarr;</small>
                     </div>
 
-                    <button
-                        class="small-btn"
-                        data-page-btn="absensi">
-                        Lihat Semua
-                    </button>
-                </div>
-
-                <div class="table-container">
-
-                    <table>
-
-                        <thead>
-                            <tr>
-                                <th>Tanggal</th>
-                                <th>Nama</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-
-                        <tbody id="dashboardAbsensi">
-                        </tbody>
-
-                    </table>
-
-                </div>
-
-            </div>
-
-
-            <div class="panel">
-
-                <div class="panel-header">
-
-                    <div>
-                        <h2>Transaksi Terbaru</h2>
+                    <!-- Kartu 2: Total Hadir Latihan -->
+                    <div class="dashboard-card-pro">
+                        <div class="card-top-info">
+                            <span class="card-label">Hadir Latihan</span>
+                            <div class="mini-icon-box green">📅</div>
+                        </div>
+                        <div style="margin-top: 20px;">
+                            <strong id="memberHadirCount" class="big-number">0 Hari</strong>
+                            <span class="status-text" style="color:var(--muted);">Tercatat aktif</span>
+                        </div>
                     </div>
 
-                    <button
-                        class="small-btn"
-                        data-page-btn="kas">
-                        Lihat Semua
-                    </button>
+                    <!-- Kartu 3: Status Kas Pribadi -->
+                    <div class="dashboard-card-pro" onclick="showPage('kas')" style="cursor: pointer;">
+                        <div class="card-top-info">
+                            <span class="card-label">Iuran Kas Anda</span>
+                            <div class="mini-icon-box purple">💰</div>
+                        </div>
+                        <div style="margin-top: 20px;">
+                            <strong id="memberKasStatus" class="big-number" style="font-size: 20px; color: var(--green);">Lancar / QRIS</strong>
+                            <span class="status-text" style="color:var(--blue);">Bayar via QRIS &rarr;</span>
+                        </div>
+                    </div>
 
+                    <!-- Kartu 4: Info Jadwal Terdekat -->
+                    <div class="dashboard-card-pro">
+                        <div class="card-top-info">
+                            <span class="card-label">Jadwal Terdekat</span>
+                            <div class="mini-icon-box orange">🔔</div>
+                        </div>
+                        <div style="margin-top: 15px;">
+                            <strong style="font-size: 15px; display: block;">Selasa & Kamis</strong>
+                            <span class="status-text" style="color:var(--muted);">15:30 WIB • Lapangan Utama</span>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="table-container">
-
-                    <table>
-
-                        <thead>
-                            <tr>
-                                <th>Tanggal</th>
-                                <th>Keterangan</th>
-                                <th>Nominal</th>
-                            </tr>
-                        </thead>
-
-                        <tbody id="dashboardKas">
-                        </tbody>
-
-                    </table>
-
+                <!-- Bagian Bawah Dashboard Anggota (Riwayat Terbaru) -->
+                <div class="panel" style="margin-top: 24px;">
+                    <div class="panel-header">
+                        <div><h2>Riwayat Kehadiran Latihan Anda</h2><p>Catatan kehadiran terkini pada sesi latihan.</p></div>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr><th>Tanggal</th><th>Status</th><th>Keterangan / Metode</th></tr>
+                            </thead>
+                            <tbody id="memberRecentAttendance">
+                                <tr><td colspan="3" class="empty">Belum ada riwayat kehadiran.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-
             </div>
 
-        </div>
+            <!-- DASHBOARD PENGURUS -->
+            <div id="pengurusDashboard">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon blue">👥</div>
+                        <div><span>Calon Anggota</span><strong id="statAnggota">0</strong></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon green">💰</div>
+                        <div><span>Pemasukan</span><strong id="statMasuk">Rp0</strong></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon red">💸</div>
+                        <div><span>Pengeluaran</span><strong id="statKeluar">Rp0</strong></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon purple">💵</div>
+                        <div><span>Saldo Kas</span><strong id="statSaldo">Rp0</strong></div>
+                    </div>
+                </div>
 
-    </div>
+                <div class="dashboard-grid">
+                    <div class="panel">
+                        <div class="panel-header">
+                            <div><h2>Absensi Terbaru</h2></div>
+                            <button class="small-btn" data-page-btn="absensi">Lihat Semua</button>
+                        </div>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr><th>Tanggal</th><th>Nama</th><th>Status</th></tr>
+                                </thead>
+                                <tbody id="dashboardAbsensi"></tbody>
+                            </table>
+                        </div>
+                    </div>
 
-</section>
+                    <div class="panel">
+                        <div class="panel-header">
+                            <div><h2>Transaksi Terbaru</h2></div>
+                            <button class="small-btn" data-page-btn="kas">Lihat Semua</button>
+                        </div>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr><th>Tanggal</th><th>Keterangan</th><th>Nominal</th></tr>
+                                </thead>
+                                <tbody id="dashboardKas"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-
-        <!-- ================= KAS ================= -->
+        <!-- ================= KAS & QRIS ================= -->
         <section id="kasPage" class="page">
-
             <div class="page-actions">
-
                 <div>
-                    <h2>Kas STEPA</h2>
-                    <p>Kelola pemasukan dan pengeluaran kas.</p>
+                    <h2>Kas & Keuangan STEPA</h2>
+                    <p>Kelola pemasukan/pengeluaran harian, bulanan, serta pembayaran iuran kas via QRIS.</p>
                 </div>
-
-                <button
-                    id="addKasBtn"
-                    class="primary-btn pengurus-only"
-                >
-                    + Tambah Transaksi
-                </button>
-
+                <div style="display:flex; gap:10px;">
+                    <button id="payQrisBtn" class="primary-btn" style="background:var(--blue);">📱 Bayar Kas via QRIS</button>
+                    <button id="addKasBtn" class="primary-btn pengurus-only">+ Input Keuangan Bendahara</button>
+                </div>
             </div>
-
 
             <div class="kas-summary">
-
-                <div>
-                    <span>Total Pemasukan</span>
-                    <strong id="kasMasuk">Rp0</strong>
-                </div>
-
-                <div>
-                    <span>Total Pengeluaran</span>
-                    <strong id="kasKeluar">Rp0</strong>
-                </div>
-
-                <div>
-                    <span>Saldo</span>
-                    <strong id="kasSaldo">Rp0</strong>
-                </div>
-
+                <div><span>Total Pemasukan</span><strong id="kasMasuk">Rp0</strong></div>
+                <div><span>Total Pengeluaran</span><strong id="kasKeluar">Rp0</strong></div>
+                <div><span>Saldo Kas Bersih</span><strong id="kasSaldo">Rp0</strong></div>
             </div>
 
-
             <div class="panel">
-
                 <div class="table-container">
-
                     <table>
-
                         <thead>
                             <tr>
                                 <th>Tanggal</th>
+                                <th>Kategori Waktu</th>
                                 <th>Jenis</th>
                                 <th>Keterangan</th>
                                 <th>Nominal</th>
                                 <th class="pengurus-only">Aksi</th>
                             </tr>
                         </thead>
-
-                        <tbody id="kasTable">
-                        </tbody>
-
+                        <tbody id="kasTable"></tbody>
                     </table>
-
                 </div>
-
             </div>
-
         </section>
 
-
-        <!-- ================= ABSENSI ================= -->
+        <!-- ================= ABSENSI & BARCODE ================= -->
         <section id="absensiPage" class="page">
-
             <div class="page-actions">
-
                 <div>
                     <h2>Absensi Calon Anggota STEPA</h2>
-                    <p>Catat kehadiran calon anggota.</p>
+                    <p>Absen cepat via Barcode dari Sekretaris atau Upload Foto Bukti.</p>
                 </div>
-
-                <button
-                    id="addAbsensiBtn"
-                    class="primary-btn pengurus-only"
-                >
-                    + Input Absensi
-                </button>
-
+                <div style="display:flex; gap:10px;">
+                    <button id="generateBarcodeBtn" class="primary-btn pengurus-only" style="background:var(--purple);">🖨️ Buat Barcode Sesi Ini</button>
+                    <button id="addAbsensiBtn" class="primary-btn pengurus-only">+ Input Manual</button>
+                </div>
             </div>
 
+            <div class="panel" style="margin-bottom: 24px; padding: 22px; display: flex; gap: 20px; align-items: center; justify-content: space-between; background: linear-gradient(135deg, #eef4ff 0%, #f8fafc 100%); border-color: #bfdbfe;">
+                <div>
+                    <h3 style="color: var(--blue-dark); font-size:16px; margin-bottom:6px;">Panel Absensi Mandiri Anggota</h3>
+                    <p style="font-size:13px; color:var(--muted);">Sekretaris telah menyediakan Barcode aktif hari ini. Lakukan scan barcode atau kirim foto bukti latihan Anda.</p>
+                </div>
+                <div style="display:flex; gap:10px; flex-shrink:0;">
+                    <button class="primary-btn" onclick="openModal('scanBarcodeModal')">📷 Scan Barcode Sekretaris</button>
+                    <button class="primary-btn" style="background:var(--green);" onclick="openModal('fotoAbsensiModal')">📸 Kirim Foto Bukti</button>
+                </div>
+            </div>
 
             <div class="panel">
-
                 <div class="table-container">
-
                     <table>
-
                         <thead>
-
                             <tr>
                                 <th>Tanggal</th>
                                 <th>Nama</th>
                                 <th>Status</th>
+                                <th>Metode</th>
                                 <th>Keterangan</th>
                                 <th class="pengurus-only">Aksi</th>
                             </tr>
-
                         </thead>
-
-                        <tbody id="absensiTable">
-                        </tbody>
-
+                        <tbody id="absensiTable"></tbody>
                     </table>
-
                 </div>
-
             </div>
-
         </section>
-
 
         <!-- ================= ANGGOTA ================= -->
         <section id="anggotaPage" class="page">
-
             <div class="page-actions">
-
                 <div>
                     <h2>Calon Anggota STEPA</h2>
                     <p>Data calon anggota dari Google Sheets.</p>
                 </div>
-
                 <div class="page-action-buttons pengurus-only">
-                    <button
-                        id="uploadAnggotaBtn"
-                        class="primary-btn"
-                        type="button"
-                    >
-                        📤 Upload Data
-                    </button>
-
-                    <button
-                        id="syncBtn"
-                        class="primary-btn"
-                        type="button"
-                    >
-                        🔄 Sinkronisasi
-                    </button>
+                    <button id="uploadAnggotaBtn" class="primary-btn" type="button">📤 Upload Data</button>
+                    <button id="syncBtn" class="primary-btn" type="button">🔄 Sinkronisasi</button>
                 </div>
-
             </div>
-
-
             <div class="panel">
-
                 <div class="table-container">
-
                     <table>
-
                         <thead>
-
-                            <tr>
-                                <th>No</th>
-                                <th>Nama</th>
-                                <th>Kelas</th>
-                                <th>No HP</th>
-                                <th>Status</th>
-                            </tr>
-
+                            <tr><th>No</th><th>Nama</th><th>Kelas</th><th>No HP</th><th>Status</th></tr>
                         </thead>
-
-                        <tbody id="anggotaTable">
-                        </tbody>
-
+                        <tbody id="anggotaTable"></tbody>
                     </table>
-
                 </div>
-
             </div>
-
         </section>
 
-    
         <!-- ================= MANAJEMEN AKUN ================= -->
         <section id="akunPage" class="page">
-
             <div class="page-actions">
                 <div>
                     <h2>Manajemen Akun</h2>
                     <p>Kelola username, password, nama, role, dan status akun STEPA.</p>
                 </div>
-
-                <button id="addUserBtn" class="primary-btn pengurus-only">
-                    ＋ Tambah Akun
-                </button>
+                <button id="addUserBtn" class="primary-btn pengurus-only">＋ Tambah Akun</button>
             </div>
-
             <div class="panel account-panel">
                 <div class="panel-header">
-                    <div>
-                        <h2>Daftar Akun</h2>
-                        <p>Akun tersimpan di Google Sheets.</p>
-                    </div>
+                    <div><h2>Daftar Akun</h2><p>Akun tersimpan di Google Sheets.</p></div>
                     <button id="refreshUsersBtn" class="small-btn">🔄 Refresh</button>
                 </div>
-
                 <div class="table-container">
                     <table>
                         <thead>
-                            <tr>
-                                <th>No</th>
-                                <th>Username</th>
-                                <th>Nama</th>
-                                <th>Role</th>
-                                <th>Status</th>
-                                <th>Aksi</th>
-                            </tr>
+                            <tr><th>No</th><th>Username</th><th>Nama</th><th>Role</th><th>Status</th><th>Aksi</th></tr>
                         </thead>
                         <tbody id="usersTable">
-                            <tr>
-                                <td colspan="6" class="empty">Memuat akun...</td>
-                            </tr>
+                            <tr><td colspan="6" class="empty">Memuat akun...</td></tr>
                         </tbody>
                     </table>
                 </div>
             </div>
-
             <div class="panel password-panel">
                 <div class="panel-header">
-                    <div>
-                        <h2>Ubah Password Saya</h2>
-                        <p>Password akun yang sedang digunakan.</p>
-                    </div>
+                    <div><h2>Ubah Password Saya</h2><p>Password akun yang sedang digunakan.</p></div>
                 </div>
-
                 <form id="myPasswordForm" class="account-form">
-                    <div>
-                        <label>Password Lama</label>
-                        <input type="password" id="oldPasswordAccount" required>
-                    </div>
-                    <div>
-                        <label>Password Baru</label>
-                        <input type="password" id="newPasswordAccount" minlength="4" required>
-                    </div>
+                    <div><label>Password Lama</label><input type="password" id="oldPasswordAccount" required></div>
+                    <div><label>Password Baru</label><input type="password" id="newPasswordAccount" minlength="4" required></div>
                     <button class="primary-btn" type="submit">🔐 Simpan Password</button>
                 </form>
             </div>
-
         </section>
-
     </main>
-
 </div>
 
-
-<!-- ================= MODAL KAS ================= -->
+<!-- ================= MODAL KAS / KEUANGAN (HARIAN & BULANAN) ================= -->
 <div id="kasModal" class="modal">
-
     <div class="modal-card">
-
         <div class="modal-header">
-            <h2>Tambah Transaksi</h2>
-
-            <button class="close-modal" data-close="kasModal">
-                ×
-            </button>
+            <h2>Input Keuangan Kas (Bendahara)</h2>
+            <button class="close-modal" data-close="kasModal">×</button>
         </div>
-
-
         <form id="kasForm">
+            <label>Kategori Waktu</label>
+            <select id="kasKategoriWaktu" required>
+                <option value="Harian">Pemasukan / Pengeluaran Harian</option>
+                <option value="Bulanan">Pemasukan / Pengeluaran Bulanan</option>
+            </select>
 
             <label>Jenis Transaksi</label>
-
             <select id="kasJenis" required>
                 <option value="Pemasukan">Pemasukan</option>
                 <option value="Pengeluaran">Pengeluaran</option>
             </select>
 
-
             <label>Keterangan</label>
+            <input type="text" id="kasKeterangan" placeholder="Contoh: Iuran Kas / Konsumsi Latihan" required>
 
-            <input
-                type="text"
-                id="kasKeterangan"
-                placeholder="Contoh: Iuran anggota"
-                required
-            >
+            <label>Nominal (Rp)</label>
+            <input type="number" id="kasNominal" placeholder="50000" min="0" required>
 
-
-            <label>Nominal</label>
-
-            <input
-                type="number"
-                id="kasNominal"
-                placeholder="50000"
-                min="0"
-                required
-            >
-
-
-            <button class="primary-btn" type="submit">
-                Simpan Transaksi
-            </button>
-
+            <button class="primary-btn" type="submit">Simpan Transaksi Kas</button>
         </form>
-
     </div>
-
 </div>
 
-
-<!-- ================= MODAL ABSENSI ================= -->
-<div id="absensiModal" class="modal">
-
-    <div class="modal-card">
-
+<!-- ================= MODAL QRIS PEMBAYARAN KAS ================= -->
+<div id="qrisModal" class="modal">
+    <div class="modal-card" style="text-align: center;">
         <div class="modal-header">
-
-            <h2>Input Absensi</h2>
-
-            <button class="close-modal" data-close="absensiModal">
-                ×
-            </button>
-
+            <h2>Pembayaran Uang Kas via QRIS</h2>
+            <button class="close-modal" data-close="qrisModal">×</button>
         </div>
-
-
-        <form id="absensiForm">
-
-            <label>Tanggal</label>
-
-            <input
-                type="date"
-                id="absensiTanggal"
-                required
-            >
-
-
-            <label>Nama Calon Anggota</label>
-
-            <select id="absensiNama" required>
-                <option value="">Memuat data...</option>
-            </select>
-
-
-            <label>Status</label>
-
-            <select id="absensiStatus" required>
-
-                <option value="Hadir">
-                    Hadir
-                </option>
-
-                <option value="Izin">
-                    Izin
-                </option>
-
-                <option value="Sakit">
-                    Sakit
-                </option>
-
-                <option value="Alpa">
-                    Alpa
-                </option>
-
-            </select>
-
-
-            <label>Keterangan</label>
-
-            <input
-                type="text"
-                id="absensiKeterangan"
-                placeholder="Opsional"
-            >
-
-
-            <button class="primary-btn" type="submit">
-                Simpan Absensi
-            </button>
-
+        <p style="font-size: 13px; color: var(--muted); margin-bottom: 15px;">Scan QRIS di bawah menggunakan m-Banking atau E-Wallet (GoPay, OVO, Dana, BCA, dll):</p>
+        <div style="background: #f8f9fb; padding: 15px; border-radius: 12px; display: inline-block; border: 1px solid var(--border); margin-bottom: 15px;">
+            <div style="width: 190px; height: 190px; background: #172033; color: white; display: flex; flex-direction:column; align-items: center; justify-content: center; font-weight: bold; border-radius: 8px; margin: 0 auto; font-size: 13px; text-align: center; padding: 10px;">
+                <span>[ QRIS STEPA ]</span>
+                <span style="font-size:10px; margin-top:8px; color:#93c5fd;">NMID: ID1029384756201</span>
+                <span style="font-size:9px; margin-top:4px; opacity:0.8;">All Payment Supported</span>
+            </div>
+        </div>
+        <form id="qrisConfirmForm">
+            <label style="text-align: left;">Nama Anggota</label>
+            <input type="text" id="qrisNama" placeholder="Nama lengkap Anda" required style="margin-bottom: 12px; text-align: left;">
+            <label style="text-align: left;">Nominal Pembayaran Kas (Rp)</label>
+            <input type="number" id="qrisNominal" placeholder="10000" min="1000" required style="margin-bottom: 15px; text-align: left;">
+            <button class="primary-btn" type="submit">Konfirmasi Pembayaran QRIS</button>
         </form>
-
     </div>
-
 </div>
 
+<!-- ================= MODAL GENERATE BARCODE OLEH SEKRETARIS ================= -->
+<div id="barcodeGeneratorModal" class="modal">
+    <div class="modal-card" style="text-align: center;">
+        <div class="modal-header">
+            <h2>Barcode Sesi Latihan Hari Ini</h2>
+            <button class="close-modal" data-close="barcodeGeneratorModal">×</button>
+        </div>
+        <p style="font-size: 13px; color: var(--muted); margin-bottom: 15px;">Barcode ini disediakan oleh Sekretaris untuk di-scan oleh anggota di lokasi latihan:</p>
+        <div style="background: white; padding: 15px; border: 2px dashed var(--blue); border-radius: 12px; display: inline-block; margin-bottom: 15px;">
+            <div style="width: 180px; height: 180px; background: #0f172a; color: white; display: flex; flex-direction:column; align-items: center; justify-content: center; border-radius: 8px; font-family: monospace; font-size: 12px; text-align:center; padding:10px;">
+                <span>||| | |||| || |</span>
+                <strong style="margin-top:10px; font-size:14px; color:#38bdf8;">STEPA-LATIHAN-2026</strong>
+                <small style="font-size:9px; color:#94a3b8; margin-top:4px;">Valid Hari Ini</small>
+            </div>
+        </div>
+        <p id="barcodeStatusInfo" style="font-size: 12px; color: var(--green); font-weight: bold; margin-bottom: 15px;">🟢 Barcode Aktif & Siap Digunakan Anggota</p>
+        <button class="primary-btn" onclick="closeModal('barcodeGeneratorModal')">Tutup</button>
+    </div>
+</div>
 
+<!-- ================= MODAL SCAN BARCODE OLEH ANGGOTA ================= -->
+<div id="scanBarcodeModal" class="modal">
+    <div class="modal-card" style="text-align: center;">
+        <div class="modal-header">
+            <h2>Scan Barcode Kehadiran</h2>
+            <button class="close-modal" data-close="scanBarcodeModal">×</button>
+        </div>
+        <p style="font-size: 13px; color: var(--muted); margin-bottom: 15px;">Arahkan kamera ke barcode yang disediakan sekretaris atau ketik token sesi:</p>
+        <div style="width: 100%; height: 150px; background: #0f172a; color: #38bdf8; display: flex; align-items: center; justify-content: center; border-radius: 8px; font-family: monospace; font-size: 13px; margin-bottom: 15px;">
+            [ Kamera Scanner Aktif... ]
+        </div>
+        <input type="text" id="barcodeToken" placeholder="Atau masukkan Kode Token (cth: STEPA-LATIHAN-2026)" style="margin-bottom: 15px; text-align:center;">
+        <button class="primary-btn" onclick="submitBarcodeAttendance()">Kirim Absen Barcode Sekarang</button>
+    </div>
+</div>
+
+<!-- ================= MODAL FOTO BUKTI KEHADIRAN ================= -->
+<div id="fotoAbsensiModal" class="modal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h2>Kirim Foto Bukti Kehadiran</h2>
+            <button class="close-modal" data-close="fotoAbsensiModal">×</button>
+        </div>
+        <form id="fotoAbsensiForm">
+            <label>Keterangan / Lokasi Latihan</label>
+            <input type="text" id="fotoKeterangan" placeholder="Contoh: Hadir di lapangan utama" required>
+            <label style="margin-top: 12px;">Upload Foto Bukti Kegiatan</label>
+            <input type="file" id="fileBuktiAbsen" accept="image/*" required style="padding: 6px;">
+            <button class="primary-btn" type="submit" style="margin-top: 18px;">Kirim Absensi Foto</button>
+        </form>
+    </div>
+</div>
+
+<!-- ================= MODAL MANUAL ABSENSI ================= -->
+<div id="absensiModal" class="modal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h2>Input Absensi Manual</h2>
+            <button class="close-modal" data-close="absensiModal">×</button>
+        </div>
+        <form id="absensiForm">
+            <label>Tanggal</label>
+            <input type="date" id="absensiTanggal" required>
+            <label>Nama Calon Anggota</label>
+            <select id="absensiNama" required><option value="">Memuat data...</option></select>
+            <label>Status Kehadiran</label>
+            <select id="absensiStatus" required>
+                <option value="Hadir">Hadir</option>
+                <option value="Izin">Izin</option>
+                <option value="Sakit">Sakit</option>
+                <option value="Alpa">Alpa</option>
+            </select>
+            <label>Metode</label>
+            <select id="absensiMetode">
+                <option value="Manual">Manual</option>
+                <option value="Barcode">Barcode</option>
+                <option value="Foto">Foto</option>
+            </select>
+            <label>Keterangan</label>
+            <input type="text" id="absensiKeterangan" placeholder="Opsional">
+            <button class="primary-btn" type="submit">Simpan Absensi</button>
+        </form>
+    </div>
+</div>
 
 <!-- ================= MODAL AKUN ================= -->
 <div id="userModal" class="modal">
     <div class="modal-card account-modal-card">
         <div class="modal-header">
-            <div>
-                <h2 id="userModalTitle">Tambah Akun</h2>
-                <p>Isi data akun STEPA.</p>
-            </div>
+            <div><h2 id="userModalTitle">Tambah Akun</h2><p>Isi data akun STEPA.</p></div>
             <button class="close-modal" data-close="userModal" type="button">×</button>
         </div>
-
         <form id="userForm">
             <input type="hidden" id="editOldUsername">
-
             <label>Username</label>
             <input type="text" id="accountUsername" required autocomplete="off">
-
             <label>Password</label>
             <input type="password" id="accountPassword" minlength="4" autocomplete="new-password">
             <small id="passwordHint">Minimal 4 karakter.</small>
-
             <label>Nama</label>
             <input type="text" id="accountNama" required>
-
             <label>Role</label>
             <select id="accountRole">
                 <option value="Anggota">Anggota</option>
                 <option value="Pengurus">Pengurus</option>
             </select>
-
             <label>Status</label>
             <select id="accountAktif">
                 <option value="TRUE">Aktif</option>
                 <option value="FALSE">Nonaktif</option>
             </select>
-
             <button class="primary-btn" type="submit">💾 Simpan Akun</button>
         </form>
     </div>
 </div>
 
-<!-- ================= MODAL UPLOAD CALON ANGGOTA ================= -->
+<!-- ================= MODAL UPLOAD ANGGOTA ================= -->
 <div id="uploadAnggotaModal" class="modal">
     <div class="modal-card">
         <div class="modal-header">
@@ -715,30 +548,20 @@
             </div>
             <button type="button" class="close-modal" data-close="uploadAnggotaModal">×</button>
         </div>
-
         <form id="uploadAnggotaForm">
             <label for="anggotaFile">File Data</label>
             <input type="file" id="anggotaFile" accept=".xlsx,.xls,.csv,text/csv" required>
-
-            <p style="font-size:13px;opacity:.75;margin:8px 0 14px;">
-                Kolom yang dikenali: <b>Nama</b>, <b>Kelas</b>, <b>No HP/HP</b>, <b>Status</b>, dan opsional <b>ID</b>.
-            </p>
-
+            <p style="font-size:13px;opacity:.75;margin:8px 0 14px;">Kolom: <b>Nama</b>, <b>Kelas</b>, <b>No HP</b>, <b>Status</b>.</p>
             <div id="uploadPreview" style="margin:12px 0;"></div>
-
-            <button class="primary-btn" id="uploadAnggotaSubmit" type="submit">
-                📤 Upload ke Google Sheets
-            </button>
+            <button class="primary-btn" id="uploadAnggotaSubmit" type="submit">📤 Upload ke Google Sheets</button>
         </form>
     </div>
 </div>
 
 <div id="toast" class="toast"></div>
 
-
-<!-- SheetJS dipakai untuk membaca file Excel di browser -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="script.js?v=20260912-FIX-ANGGOTA"></script>
+<script src="script.js?v=20261116-PRO-MAX"></script>
 
 </body>
 </html>
