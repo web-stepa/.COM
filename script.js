@@ -604,6 +604,65 @@ function populateAbsensiNames() {
         select.appendChild(opt);
     });
 }
+let html5QrCode = null;
+
+// Fungsi untuk Membuka Scanner Kamera Belakang
+function startScannerCamera() {
+    // Pastikan library sudah termuat
+    if (typeof Html5Qrcode === "undefined") {
+        showToast("Library scanner belum siap.");
+        return;
+    }
+
+    openModal('scanBarcodeModal');
+
+    // Beri jeda sedikit agar modal terbuka dan elemen #reader siap
+    setTimeout(() => {
+        if (!html5QrCode) {
+            html5QrCode = new Html5Qrcode("reader");
+        }
+
+        html5QrCode.start(
+            { facingMode: "environment" }, // Menggunakan kamera belakang HP
+            {
+                fps: 10,    // Kecepatan frame per detik
+                qrbox: { width: 250, height: 250 } // Kotak fokus kamera
+            },
+            (decodedText, decodedResult) => {
+                // BERHASIL SCAN!
+                console.log(`Barcode terdeteksi: ${decodedText}`);
+                
+                // Masukkan hasil scan ke dalam input token
+                const tokenInput = $("barcodeToken");
+                if (tokenInput) tokenInput.value = decodedText;
+
+                // Matikan kamera setelah berhasil scan
+                stopScannerCamera();
+                closeModal('scanBarcodeModal');
+
+                // Otomatis kirim absensi
+                submitBarcodeAttendance();
+            },
+            (errorMessage) => {
+                // Error framing saat mencari barcode (biasanya diabaikan karena proses scanning terus berjalan)
+            }
+        ).catch((err) => {
+            console.error("Gagal memulai kamera:", err);
+            showToast("Gagal mengakses kamera belakang.");
+        });
+    }, 300);
+}
+
+// Fungsi untuk Mematikan Kamera
+function stopScannerCamera() {
+    if (html5QrCode) {
+        html5QrCode.stop().then(() => {
+            console.log("Kamera scanner dihentikan.");
+        }).catch((err) => {
+            console.error("Gagal menghentikan kamera:", err);
+        });
+    }
+}
 
 /* ================= RENDER DASHBOARD ================= */
 function renderDashboard() {
